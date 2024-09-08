@@ -1,0 +1,7 @@
+{
+ "compilerOptions": {
+   "moduleResolution": "Node",
+   "target": "ES5",
+   "allowSyntheticDefaultImports": true
+ }
+}
