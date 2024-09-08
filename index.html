@@ -1,22 +1,24 @@
 <!doctype html>
-<html lang="zh-cn">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>music72</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <link rel="icon" type="image/svg+xml" href="/src/assets/svgs/logoSvg/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>方块郭的图书馆</title>
     <script>
-      if (!!window.ActiveXObject || "ActiveXObject" in window) {
-        document.write("<h1>您的浏览器版本可能过低，暂不支持访问本页面。</h1><h1>推荐使用谷歌浏览器或微软Edge浏览器。</h1>")  }
+        if (!!window.ActiveXObject || "ActiveXObject" in window) {
+            document.write("<h1>您的浏览器版本可能过低，暂不支持访问本页面。</h1><h1>推荐使用谷歌浏览器或微软Edge浏览器。</h1>")
+        }
     </script>
-  </head>
-  <body>
-    <noscript>
-      <div>您的浏览器不支持JavaScript或禁用JavaScript，本页面暂不支持访问。</div>
-    </noscript>
-    <div id="app"></div>
-    <div id="root">
-        <h1>加载中...</h1>
-    </div>
-    <script type="module" src="/test/main.jsx"></script>
-  </body>
+</head>
+<body>
+<noscript>
+    <div>您的浏览器不支持JavaScript或禁用JavaScript，本页面暂不支持访问。</div>
+</noscript>
+<!--[if IE]> <h1>您的浏览器版本可能过低，暂不支持访问本页面。</h1><h1>推荐使用谷歌浏览器或微软Edge浏览器。</h1><![endif]-->
+<div id="root">
+    <h1>加载中...</h1>
+</div>
+<script type="module" src="/src/pages/main.tsx"></script>
+</body>
 </html>

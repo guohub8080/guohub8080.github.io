@@ -1,7 +1,71 @@
 {
- "compilerOptions": {
-   "moduleResolution": "Node",
-   "target": "ES5",
-   "allowSyntheticDefaultImports": true
- }
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "allowJs": true,
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ],
+      "@pages/*": [
+        "src/pages/*"
+      ],
+
+      "@views/*": [
+        "src/pages/views/*"
+      ],
+      "@comps/*": [
+        "src/pages/components/*"
+      ],
+      "@assets/*": [
+        "src/pages/assets/*"
+      ],
+      "@utils/*": [
+        "src/utils/*"
+      ]
+    },
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
+    "strict": false
+  },
+  /* Linting */
+
+  "noUnusedLocals": false,
+  "noUnusedParameters": false,
+  "noFallthroughCasesInSwitch": true,
+  "noImplicitThis": false,
+  // js/ts 混用时设为false
+  "allowSyntheticDefaultImports": true,
+  "include": [
+    "src",
+    "src/**/*.ts",
+    "src/**/*.jsx",
+    "src/**/*.js",
+    "src/**/*.d.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    ".vscode",
+    ".idea"
+  ],
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
 }

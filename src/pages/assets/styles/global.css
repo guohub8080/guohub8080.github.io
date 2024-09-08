@@ -1,0 +1,48 @@
+@import '/src/pages/assets/fonts/font.css';
+
+* {
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    box-sizing: border-box;
+    text-align: center;
+    font-family: "misans-m", "PingFang SC", "Heiti SC", "Microsoft YaHei", "微软雅黑", "Helvetica", "WenQuanYi Micro Hei", serif;
+    /*font-family:  "PingFang SC", "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "WenQuanYi Micro Hei", serif;*/
+}
+
+object[type="audio/x-jazz"] {
+    margin: 0;
+    padding: 0;
+    width: 0 !important;
+    height: 0 !important;
+    position: fixed;
+}
+
+body {
+    background-color: #FAFAFA;
+}
+
+.variable-row {
+    display: flex;
+    justify-content: left;
+    text-align: left;
+}
+
+.object-key-val {
+    text-align: left;
+    margin-left: 15px;
+}
+
+
+.brace-row {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    font-weight: bold;
+    width: fit-content;
+}
+
+.react-json-view *, pre, code * {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', "Helvetica", "misans-m", "MiSans", monospace !important;
+}
+
+.string-value {
+}

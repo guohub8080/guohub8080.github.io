@@ -1,0 +1,17 @@
+export default [
+	{value: -7, label: "C♭ Major / A♭ Minor"},
+	{value: -6, label: "G♭ Major / E♭ Minor"},
+	{value: -5, label: "D♭ Major / B♭ Minor"},
+	{value: -4, label: "A♭ Major / F Minor"},
+	{value: -3, label: "E♭ Major / C Minor"},
+	{value: -2, label: "B♭ Major / G Minor"},
+	{value: -1, label: "F Major / D Minor"},
+	{value: 0, label: "C Major / A Minor"},
+	{value: 1, label: "G Major / E Minor"},
+	{value: 2, label: "D Major / B Minor"},
+	{value: 3, label: "A Major / F♯ Minor"},
+	{value: 4, label: "E Major / C♯ Minor"},
+	{value: 5, label: "B Major / G♯ Minor"},
+	{value: 6, label: "F♯ Major / D♯ Minor"},
+	{value: 7, label: "C♯ Major / A♯ Minor"},
+]
