@@ -13,6 +13,7 @@ export default defineConfig({
     }),
     // isProduction && terser() // 只在生产环境下使用 terser 压缩
   ],
+  base: "./",
   esbuild:{
     minifyIdentifiers:false,
     // keepNames:true
