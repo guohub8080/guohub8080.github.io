@@ -8,7 +8,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isGitHubPages = process.env.VITE_GITHUB_PAGES === 'true';
 const isUniapp = process.env.VITE_UNIAPP === 'true';
 if (isGitHubPages) {
-	console.log("GitHub Pages 模式下，base 为 /mtkit/")
+	console.log("GitHub Pages 模式")
 }
 if (isUniapp) {
 	console.log("Uniapp 模式")
@@ -73,7 +73,7 @@ export default defineConfig({
 		extensions: [".ts", ".tsx", ".js", "jsx"]
 	},
 	publicDir: resolve(__dirname, 'public'), // 绝对路径确保准确性
-	base: './',
+	base: '/',
 	build: {
 		outDir: "docs",
 		copyPublicDir: true,
