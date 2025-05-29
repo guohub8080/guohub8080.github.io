@@ -1,0 +1,28 @@
+@import '@/assets/fonts/font.css';
+
+* {
+    margin: 0;
+    padding: 0;
+    font-size: 16px;
+    box-sizing: border-box;
+    text-align: center;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-overflow-scrolling: touch;
+    font-family: "misans-m-fh", "misans-m-2500", "misans-m-ex1000", tnr, "PingFang SC", "Heiti SC", "Microsoft YaHei", "微软雅黑", "Helvetica", "WenQuanYi Micro Hei", serif !important;
+}
+
+:root {
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+object[type="audio/x-jazz"] {
+    position: fixed;
+}

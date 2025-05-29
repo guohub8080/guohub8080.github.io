@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_图层_1" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 200 200">
+  <!-- Generator: Adobe Illustrator 29.0.1, SVG Export Plug-In . SVG Version: 2.1.0 Build 192)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: #98bbf6;
+        font-family: Arial-BoldMT, Arial;
+        font-size: 112.6px;
+        font-weight: 700;
+      }
+
+      .st1 {
+        fill: #2356df;
+      }
+    </style>
+  </defs>
+  <path class="st1" d="M194.7,196.9H5.3v-88.7h189.3v88.7ZM17.2,184.3h165.6v-62.6H17.2v62.6Z"/>
+  <path class="st1" d="M40.9,108.1h11.8v82.8h-11.8v-82.8ZM76.4,108.1h11.8v82.8h-11.8v-82.8ZM111.8,108.1h11.8v82.8h-11.8v-82.8ZM147.3,108.1h11.8v82.8h-11.8v-82.8Z"/>
+  <path class="st1" d="M171,108.1h23.7v47.3h-23.7v-47.3ZM105.9,108.1h23.7v47.3h-23.7v-47.3ZM70.4,108.1h23.7v47.3h-23.7v-47.3ZM34.9,108.1h23.7v47.3h-23.7v-47.3Z"/>
+  <text class="st0" transform="translate(2.1 92.5) scale(.8 1)"><tspan x="0" y="0">MIDI</tspan></text>
+</svg>

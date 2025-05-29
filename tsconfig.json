@@ -10,27 +10,13 @@
     "allowJs": true,
     "module": "ESNext",
     "skipLibCheck": true,
+    "noEmitOnError": true,
     "baseUrl": ".",
     "paths": {
       "@/*": [
         "src/*"
       ],
-      "@pages/*": [
-        "src/pages/*"
-      ],
 
-      "@views/*": [
-        "src/pages/views/*"
-      ],
-      "@comps/*": [
-        "src/pages/components/*"
-      ],
-      "@assets/*": [
-        "src/pages/assets/*"
-      ],
-      "@utils/*": [
-        "src/utils/*"
-      ]
     },
     /* Bundler mode */
     "moduleResolution": "bundler",
