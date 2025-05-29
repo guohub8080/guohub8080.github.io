@@ -1,17 +1,37 @@
+name: Deploy Static Site with Relative Paths
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   deploy:
     environment:
       name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      # 1. 检出代码
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. 设置 Node.js 环境（如果是前端项目）
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # 3. 安装依赖并构建（关键步骤）
       - name: Install and Build
         run: |
           rm -rf node_modules package-lock.json
@@ -19,14 +39,21 @@ jobs:
           npm install -g pnpm --force
           pnpm config set strict-peer-dependencies false
           pnpm config set auto-install-peers true 
-          pnpm install --no-frozen-lockfile
-          pnpm build
+          pnpm install  --no-frozen-lockfile
+          pnpm  gh
         env:
+          # 强制 Vite 使用生产环境配置
           NODE_ENV: production
           CI: true
-          VITE_GITHUB_PAGES: true
+          VITE_GITHUB_PAGES: true  # 设置 VITE_GITHUB_PAGES 环境变量
 
-      - name: Deploy to GitHub Pages with peaceiris/action-gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+      # 4. 仅上传构建后的目录（而非整个仓库）
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          publish_dir: docs
+          path: 'docs'  # 必须与 vite.config.js 中的 outDir 一致
+
+      # 5. 部署到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
