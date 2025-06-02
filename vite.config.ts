@@ -65,6 +65,9 @@ export default defineConfig({
 	optimizeDeps: {
 		include: ['react', 'react-dom']
 	},
+	worker:{
+		format: 'es',
+	},
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "src"),

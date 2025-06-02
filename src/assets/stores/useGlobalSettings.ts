@@ -1,3 +1,4 @@
+import cssPresets from "@/assets/styles/cssPresets.ts";
 import {create} from 'zustand'
 import {immer} from 'zustand/middleware/immer'
 import {createJSONStorage, persist} from 'zustand/middleware'
@@ -23,6 +24,8 @@ type GlobalSettingsType = {
 	setIsNaviBarHidden: (newStatus: boolean) => void,
 	pageMargin: number,
 	setPageMargin: (newMargin: number) => void,
+	mainBgColor: string,
+	setMainBgColor: (newColor: string) => void,
 }
 const storeKey = 'globalSettings'
 const defaultStore = {
@@ -36,6 +39,7 @@ const defaultStore = {
 	lastViewURL: "", //上次访问过的地址，可以用来保存
 	pageMargin: 10,
 	mainVolume: 0,// 主音量
+	mainBgColor: cssPresets.mainBgColor,
 }
 const useGlobalSettings = create<GlobalSettingsType>()(immer(persist(
 		(set) => ({
@@ -43,6 +47,11 @@ const useGlobalSettings = create<GlobalSettingsType>()(immer(persist(
 			setNaviWindowOpen: (newStatus: boolean) => {
 				set((state) => {
 					state.isNaviWindowOpen = newStatus
+				})
+			},
+			setMainBgColor: (newColor: string) => {
+				set((state) => {
+					state.mainBgColor = newColor
 				})
 			},
 			setPageMargin: (newMargin: number) => {

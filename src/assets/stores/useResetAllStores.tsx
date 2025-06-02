@@ -12,7 +12,7 @@ import useChordConfig from "./useChordConfig.ts";
 import useHarmonicSeriesConfig from "./useHarmonicSeriesConfig.ts";
 import useFindChordConfig from "./useFindChordConfig.ts";
 import useMIDIConfig from "./useMIDIConfig.ts";
-import useExamConfig from "./useExamConfig.ts";
+import useTranscodeConfig from "./useTranscodeConfig.ts";
 
 const useResetAllStores = () => {
 	const r1 = useCircleOfFifthsConfig()
@@ -26,7 +26,7 @@ const useResetAllStores = () => {
 	const r9 = useHarmonicSeriesConfig()
 	const r10 = useFindChordConfig()
 	const r11 = useMIDIConfig()
-	const r12 = useExamConfig()
+	const r12 = useTranscodeConfig()
 	const r13 = useBeatFunctionsConfig()
 	const r14 = useBeatFunctionsConfig()
 	const r15 = usePcKeyboardConfig()

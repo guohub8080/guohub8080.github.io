@@ -34,7 +34,14 @@ const fallbackRender = ({error}) => {
 
 const MainLayout = () => {
 	const {height, width} = useWindowSize()
-	const {naviBarHeight, setNaviWindowOpen, setLastViewURL, isNaviBarHidden, setIsNaviBarHidden} = useGlobalSettings()
+	const {
+		naviBarHeight,
+		setNaviWindowOpen,
+		setLastViewURL,
+		isNaviBarHidden,
+		setIsNaviBarHidden,
+		mainBgColor
+	} = useGlobalSettings()
 	const [tooShortWindow, setTooShortWindow] = useState(false)
 	const [isLandScreen, setIsLandScreen] = useState(false)
 	const pathName = useLocation().pathname
@@ -72,7 +79,7 @@ const MainLayout = () => {
 		{tooShortWindow && <TooShortWindow isActive={tooShortWindow} h={height} w={width}/>}
 
 		<div style={{display: tooShortWindow || isLandScreen ? "none" : "block"}}
-		     css={main_frame_css({naviBarHeight, isNaviBarHidden})}>
+		     css={main_frame_css({naviBarHeight, isNaviBarHidden, mainBgColor})}>
 			{/*导航区，点击可以显示*/}
 			{!isNaviBarHidden && <div className="navi_bar" onClick={() => setNaviWindowOpen(true)}>
 				<NaviBar/>
@@ -89,19 +96,19 @@ export default MainLayout
 
 const main_frame_css = (i: {
 	naviBarHeight: number,
-	isNaviBarHidden: boolean
+	isNaviBarHidden: boolean,
+	mainBgColor?: string
 }) => css({
 	width: "calc(100vw)",
 	height: "100vh",
 	overflow: "hidden",
 	overflowX: "hidden",
 	userSelect: "none",
-	background: cssPresets.mainBgColor,
 	...cssPresets.flexCenter,
 	flexDirection: "column",
 	"& .navi_bar": {
 		width: "calc(100vw)",
-		overflowX: "hidden",
+		// overflowX: "hidden",
 		height: `${i.naviBarHeight}px`,
 		userSelect: "none",
 		background: "white",
@@ -111,12 +118,17 @@ const main_frame_css = (i: {
 		top: 0, // 滚动到顶部时固定
 		left: 0,
 		right: 0,
-		boxShadow: "0px 0px 9px 0px rgba(0, 0, 0, 0.05)",
+		boxShadow: "0px 0px 9px 0px rgba(0, 0, 0, 0.1)",
 
 	},
-	"&.main_window": {
+	"& .main_window": {
 		userSelect: "none",
 		width: "100%",
 		height: `calc(100vh - ${i.isNaviBarHidden ? 0 : i.naviBarHeight}px)`,
+		minHeight: `calc(100vh - ${i.isNaviBarHidden ? 0 : i.naviBarHeight}px)`,
+		maxHeight: `calc(100vh - ${i.isNaviBarHidden ? 0 : i.naviBarHeight}px)`,
+		overflowY: "auto",
+		backgroundColor: i.mainBgColor,
+		zIndex: -999
 	}
 })

@@ -1,0 +1,101 @@
+
+.boxContainer {
+    width: 100%;
+    height: 120px;
+    margin-top: 20px;
+    perspective-origin: top;
+    user-select: none;
+    transform: scale(0.35);
+    /*background-color: #fff;*/
+    transition: transform 0.2s ease, filter 0.5s ease;
+}
+
+/*.boxContainer:hover {*/
+/*    cursor: pointer;*/
+/*    transform: scale(111%);*/
+/*    filter: drop-shadow(0 0px 80px #a6fff3);*/
+/*    transition: transform 0.2s ease, filter 0.5s ease;*/
+/*}*/
+
+.boxWrapper {
+    width: 200px;
+    height:200px;
+    padding-top: 140px;
+    margin: auto;
+    user-select: none;
+    z-index: 0;
+    /*background-color: #8d2323;*/
+    position: relative;
+    transform-style: preserve-3d;
+    animation: rotate 15s ease infinite both;
+    transform: rotateX(-35deg) rotateY(-45deg) rotateZ(0deg);
+
+}
+
+.cubeFace {
+    width: 200px;
+    height: 200px;
+    user-select: none;
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform-origin: bottom;
+    color: black;
+    opacity: 1;
+    /*color: transparent;*/
+    /* 去除透明颜色以查看每个面上的标签 */
+    /*box-shadow: -1px 10px 20px 5px rgba(99, 168, 99, 0.459);*/
+
+}
+
+.cubeFront {
+    /*background: rgb(170, 241, 247);*/
+    transform: translateZ(100px);
+}
+
+.cubeBack {
+    transform: translateZ(-100px);
+    background-color: #4d81f0;
+    /*background: rgb(245, 252, 185);*/
+}
+
+.cubeLeft {
+    /*background: rgb(190, 235, 190);*/
+    background-color: #4d81f0;
+    transform: translateX(-100px) rotateY(90deg);
+}
+
+.cubeTop {
+    /*background: rgb(159, 44, 92);*/
+    transform: rotateX(-270deg) translateY(-100px);
+    transform-origin: top center;
+}
+
+.cubeRight {
+    /*background: rgb(15, 190, 15);*/
+    transform: rotateY(-270deg) translateX(100px);
+    transform-origin: top right;
+}
+
+.cubeBottom {
+    background: #4d81f0;
+    transform: translateZ(100px) rotateX(90deg);
+    filter: drop-shadow(0px 0px 20px #565656);
+
+}
+
+@keyframes rotate {
+    0%, 100% {
+        transform: rotateX(-35deg) rotateY(-30deg) rotateZ(0deg);
+    }
+    25% {
+        transform: rotateX(-40deg) rotateY(-75deg) rotateZ(0deg);
+    }
+    50% {
+        transform: rotateX(-35deg) rotateY(-65deg) rotateZ(0deg);
+    }
+    75% {
+        transform: rotateX(-40deg) rotateY(-25deg) rotateZ(0deg);
+    }
+}

@@ -19,4 +19,6 @@ export default {
 	upgradeLog: "log",
 	keyboard: "keyboard",
 	home: "home",
+	mtkit: "mtkit",
+	code: "code",
 }
