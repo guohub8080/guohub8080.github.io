@@ -3,7 +3,7 @@ import cssFunctions from "@/assets/styles/cssFunctions.ts";
 import cssPresets from "@/assets/styles/cssPresets.ts";
 import BiLayerDiv from "@/components/reFrame/BiLayerDiv/BiLayerDiv.tsx";
 import {css} from "@emotion/react";
-import production_svg from "@/assets/svgs/logos/production.svg";
+import production_svg from "@/assets/svgs/logos/Production.svg";
 import mtkit_text_svg from "@/assets/svgs/logos/MtKitText.svg";
 import {Toaster} from "react-hot-toast";
 import WebAddrCard from "./comps/WebAddrCard";
