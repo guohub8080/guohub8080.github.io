@@ -8,7 +8,8 @@ import BiLayerDiv from "@/components/reFrame/BiLayerDiv/BiLayerDiv.tsx";
 import warningToast from "@/utils/warningToast.tsx";
 import {css} from "@emotion/react";
 import {Button, Radio, Spin, Switch} from "antd";
-import {useEffect, useState} from "react";
+import {isEmpty, isNull, isUndefined} from "lodash";
+import {useEffect, useMemo, useRef, useState} from "react";
 import toast from "react-hot-toast";
 import {IoKey} from "react-icons/io5";
 import {useCopyToClipboard} from "usehooks-ts";
@@ -30,28 +31,33 @@ const GenRsa = (props: {}) => {
 	} = useTranscodeConfig()
 	const [copiedText, copy] = useCopyToClipboard()
 	const [isLoading, setIsLoading] = useState(false)
+	const [isWorkerReady, setIsWorkerReady] = useState(false)
 	const options = [
 		512, 1024, 2048, 4096
 	];
 	const {pageMargin} = useGlobalSettings()
-	const worker = new Worker(new URL('../utils/genRsaWorker.js', import.meta.url), {type: "module"});
+	const workerRef = useRef<Worker | null>(null);
 	useEffect(() => {
-		worker.onmessage = (e) => {
-			if (e.data['private_key']) {
-				setPrivateKey(e.data['private_key'])
-			}
-			if (e.data['public_key']) {
-				setPublicKey(e.data['public_key'])
-			}
-			if (e.data['private_key_b64']) {
-				setPrivateKeyB64(e.data['private_key_b64'])
-			}
-			if (e.data['public_key_b64']) {
-				setPublicKeyB64(e.data['public_key_b64'])
-			}
-			setIsLoading(false)
+		// 初始化 Worker 一次
+		if (!workerRef.current) {
+			setIsWorkerReady(false)
+			workerRef.current = new Worker(new URL('../utils/genRsaWorker.js', import.meta.url), {type: "module"});
+			workerRef.current.onmessage = (e) => {
+				if (e.data['private_key']) setPrivateKey(e.data['private_key']);
+				if (e.data['public_key']) setPublicKey(e.data['public_key']);
+				if (e.data['private_key_b64']) setPrivateKeyB64(e.data['private_key_b64']);
+				if (e.data['public_key_b64']) setPublicKeyB64(e.data['public_key_b64']);
+				setIsLoading(false);
+				toast.success("Worker 加载成功！");
+			};
+			workerRef.current.onerror = (error) => {
+				console.error("Worker 加载失败:", error.message);
+				warningToast("Worker 加载失败，请刷新页面");
+			};
+			setIsWorkerReady(true)
 		}
 	}, []);
+
 
 	const copy_text = (i: string) => {
 		copy(i).then(() => {
@@ -66,7 +72,7 @@ const GenRsa = (props: {}) => {
 		if (isLoading) return;
 		setIsLoading(true)
 		clearKeys()
-		worker.postMessage(genRsaLength)
+		workerRef?.current?.postMessage(genRsaLength)
 	}
 	return <>
 		<BiLayerDiv innerMaxWidth={600} px={pageMargin}>
@@ -84,7 +90,8 @@ const GenRsa = (props: {}) => {
 						<div className="t2">{isBase64 ? "以Base64编码" : "普通Text编码"}</div>
 						<Button autoInsertSpace={false} type={"primary"} loading={isLoading}
 						        onClick={runWorker}
-						        style={{width: 150, marginLeft: 15}}>生成</Button>
+						        disabled={!isWorkerReady}
+						        style={{width: 150, marginLeft: 15}}>{isWorkerReady ? "生成" : "加载中"}</Button>
 					</div>
 				</div>
 				{isLoading && <div className="loading_text">
