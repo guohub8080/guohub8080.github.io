@@ -75,7 +75,7 @@ const DecodeRsa = (props: {}) => {
 							color: googleColors.gray800
 						}}
 						autoSize={{minRows: 2, maxRows: 6}}
-						placeholder="请输入要加密的明文"/>
+						placeholder="请输入要解密的密文"/>
 				</div>
 
 				<div className="ipt">

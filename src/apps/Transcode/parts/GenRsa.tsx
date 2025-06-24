@@ -48,7 +48,8 @@ const GenRsa = (props: {}) => {
 				if (e.data['private_key_b64']) setPrivateKeyB64(e.data['private_key_b64']);
 				if (e.data['public_key_b64']) setPublicKeyB64(e.data['public_key_b64']);
 				setIsLoading(false);
-				toast.success("Worker 加载成功！");
+				// toast.success("Worker 加载成功！");
+				console.log("Worker 加载成功！");
 			};
 			workerRef.current.onerror = (error) => {
 				console.error("Worker 加载失败:", error.message);
