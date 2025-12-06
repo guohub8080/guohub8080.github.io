@@ -1,0 +1,538 @@
+export const title = "使用 Ollama 本地运行 Qwen 模型";
+
+# {title}
+
+Ollama 是一个轻量级的本地大语言模型运行工具，支持多种开源模型。Qwen（通义千问）是阿里云开发的强大中文语言模型，通过 Ollama 可以轻松在本地部署和使用。
+
+## 什么是 Ollama？
+
+Ollama 是一个开源的 AI 模型运行框架，让你能够在本地计算机上运行大语言模型，无需云端 API，保护数据隐私。
+
+主要特点：
+- 简单易用：命令行工具，安装和使用都很简单
+- 模型丰富：支持 Llama、Mistral、Qwen、Gemma 等多种模型
+- 本地运行：数据不离开本地，保护隐私
+- 资源优化：自动管理 GPU/CPU 资源
+- API 兼容：提供 OpenAI 兼容的 REST API
+
+## 安装 Ollama
+
+### macOS 安装
+
+```bash
+# 使用 Homebrew 安装
+brew install ollama
+
+# 或者下载安装包
+# 访问 https://ollama.ai 下载 .dmg 文件
+```
+
+### Linux 安装
+
+```bash
+# 一键安装脚本
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 验证安装
+ollama --version
+```
+
+### Windows 安装
+
+```bash
+# 下载 Windows 安装程序
+# 访问 https://ollama.ai 下载 .exe 文件并安装
+
+# 或使用 WSL2 + Linux 安装方式
+```
+
+### 启动 Ollama 服务
+
+```bash
+# 启动 Ollama 服务（后台运行）
+ollama serve
+
+# 服务默认运行在 http://localhost:11434
+```
+
+## Qwen 模型介绍
+
+Qwen（通义千问）是阿里云推出的大语言模型系列，特点包括：
+- 优秀的中文理解和生成能力
+- 支持长文本处理（最高 32K tokens）
+- 多个规模版本可选（0.5B 到 72B）
+- 开源可商用
+
+### 常用 Qwen 模型版本
+
+| 模型名称 | 参数规模 | 内存需求 | 适用场景 |
+|---------|---------|---------|---------|
+| qwen:0.5b | 5亿 | 约 1GB | 轻量级任务、快速响应 |
+| qwen:1.8b | 18亿 | 约 2GB | 日常对话、简单问答 |
+| qwen:4b | 40亿 | 约 4GB | 通用任务、代码生成 |
+| qwen:7b | 70亿 | 约 8GB | 复杂推理、专业问答 |
+| qwen:14b | 140亿 | 约 16GB | 高质量输出 |
+| qwen:72b | 720亿 | 约 80GB | 最强性能 |
+
+## 下载和运行 Qwen 模型
+
+### 下载模型
+
+```bash
+# 下载 Qwen 7B 模型（推荐配置）
+ollama pull qwen:7b
+
+# 下载其他版本
+ollama pull qwen:4b
+ollama pull qwen:14b
+ollama pull qwen:72b
+
+# 下载最新版本（默认）
+ollama pull qwen
+```
+
+下载时间取决于网络速度和模型大小，7B 模型约 4GB。
+
+### 运行模型
+
+```bash
+# 交互式对话
+ollama run qwen:7b
+
+# 进入对话界面后可以直接输入问题
+```
+
+示例对话：
+
+```
+>>> 你好，请介绍一下你自己
+我是通义千问，由阿里云开发的AI助手。我可以：
+- 回答各种问题
+- 进行创意写作
+- 编写和解释代码
+- 提供学习建议
+- 进行数学计算
+等等。有什么我可以帮助你的吗？
+
+>>> 用 Python 写一个快速排序算法
+def quicksort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+
+# 使用示例
+numbers = [3, 6, 8, 10, 1, 2, 1]
+print(quicksort(numbers))  # [1, 1, 2, 3, 6, 8, 10]
+
+>>> /bye  # 退出对话
+```
+
+### 管理模型
+
+```bash
+# 列出已下载的模型
+ollama list
+
+# 删除模型
+ollama rm qwen:7b
+
+# 显示模型信息
+ollama show qwen:7b
+```
+
+## 通过 API 使用 Qwen
+
+Ollama 提供 REST API，可以在应用中集成。
+
+### 基础 API 调用
+
+```bash
+# 使用 curl 测试
+curl http://localhost:11434/api/generate -d '{
+  "model": "qwen:7b",
+  "prompt": "为什么天空是蓝色的？",
+  "stream": false
+}'
+```
+
+### JavaScript/TypeScript 集成
+
+```typescript
+// 安装 Ollama JavaScript 库（可选）
+// npm install ollama
+
+interface OllamaResponse {
+  model: string;
+  response: string;
+  done: boolean;
+}
+
+// 方式 1：使用原生 fetch
+async function chatWithQwen(prompt: string): Promise<string> {
+  const response = await fetch('http://localhost:11434/api/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'qwen:7b',
+      prompt: prompt,
+      stream: false
+    })
+  });
+  
+  const data = await response.json();
+  return data.response;
+}
+
+// 使用示例
+async function main() {
+  const answer = await chatWithQwen('什么是递归？请用简单的例子解释。');
+  console.log('Qwen 回答:', answer);
+}
+
+// 方式 2：流式响应
+async function chatWithQwenStream(prompt: string): Promise<void> {
+  const response = await fetch('http://localhost:11434/api/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'qwen:7b',
+      prompt: prompt,
+      stream: true
+    })
+  });
+  
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  
+  if (!reader) return;
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n').filter(line => line.trim());
+    
+    for (const line of lines) {
+      try {
+        const json = JSON.parse(line);
+        process.stdout.write(json.response || '');
+      } catch (e) {
+        // 忽略解析错误
+      }
+    }
+  }
+  
+  console.log('\n'); // 换行
+}
+```
+
+### React 组件示例
+
+```typescript
+import React, { useState } from 'react';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const QwenChat: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage: Message = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'qwen:7b',
+          prompt: input,
+          stream: false
+        })
+      });
+
+      const data = await response.json();
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: data.response
+      };
+      
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('请求失败:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-screen max-w-4xl mx-auto p-4">
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`p-4 rounded-lg ${
+              msg.role === 'user'
+                ? 'bg-blue-100 dark:bg-blue-900 ml-auto max-w-[80%]'
+                : 'bg-gray-100 dark:bg-gray-800 mr-auto max-w-[80%]'
+            }`}
+          >
+            <div className="font-semibold mb-1">
+              {msg.role === 'user' ? '你' : 'Qwen'}
+            </div>
+            <div className="whitespace-pre-wrap">{msg.content}</div>
+          </div>
+        ))}
+        {loading && (
+          <div className="text-gray-500 italic">Qwen 正在思考...</div>
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="输入消息..."
+          className="flex-1 px-4 py-2 border rounded-lg dark:bg-gray-800"
+          disabled={loading}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={loading || !input.trim()}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+        >
+          发送
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default QwenChat;
+```
+
+## 高级配置
+
+### 自定义模型参数
+
+```bash
+# 使用参数运行
+ollama run qwen:7b --temperature 0.8 --top-p 0.9
+```
+
+通过 API 设置参数：
+
+```typescript
+interface OllamaOptions {
+  temperature?: number;  // 0-2，控制随机性，默认 0.8
+  top_p?: number;       // 0-1，核采样，默认 0.9
+  top_k?: number;       // 候选词数量，默认 40
+  num_predict?: number; // 最大生成 tokens，默认 128
+}
+
+async function chatWithOptions(prompt: string, options: OllamaOptions) {
+  const response = await fetch('http://localhost:11434/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'qwen:7b',
+      prompt: prompt,
+      stream: false,
+      options: {
+        temperature: options.temperature || 0.8,
+        top_p: options.top_p || 0.9,
+        top_k: options.top_k || 40,
+        num_predict: options.num_predict || 128
+      }
+    })
+  });
+  
+  return await response.json();
+}
+
+// 使用示例
+const result = await chatWithOptions('写一首关于春天的诗', {
+  temperature: 1.2,  // 更有创意
+  num_predict: 256   // 生成更长的内容
+});
+```
+
+### 创建自定义 Modelfile
+
+创建一个定制化的 Qwen 模型：
+
+```dockerfile
+# 创建 Modelfile 文件
+FROM qwen:7b
+
+# 设置系统提示词
+SYSTEM """
+你是一个专业的 JavaScript 编程助手。你的职责是：
+1. 帮助用户解决 JavaScript 相关问题
+2. 编写高质量、可维护的代码
+3. 解释复杂的概念
+4. 提供最佳实践建议
+
+请始终提供清晰、简洁的答案。
+"""
+
+# 设置参数
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER num_predict 512
+
+# 设置模板
+TEMPLATE """
+### 用户问题:
+{{ .Prompt }}
+
+### JavaScript 助手回答:
+"""
+```
+
+创建和使用自定义模型：
+
+```bash
+# 创建模型
+ollama create qwen-js-helper -f ./Modelfile
+
+# 运行自定义模型
+ollama run qwen-js-helper
+
+# 使用 API
+curl http://localhost:11434/api/generate -d '{
+  "model": "qwen-js-helper",
+  "prompt": "如何实现防抖函数？"
+}'
+```
+
+## 性能优化建议
+
+### 硬件要求
+
+推荐配置：
+- CPU：8 核心以上
+- 内存：16GB 以上（运行 7B 模型）
+- GPU：NVIDIA GPU（可选，但会显著加速）
+  - 7B 模型：至少 8GB VRAM
+  - 14B 模型：至少 16GB VRAM
+- 存储：至少 10GB 可用空间
+
+### GPU 加速
+
+如果有 NVIDIA GPU：
+
+```bash
+# 检查 GPU 是否可用
+nvidia-smi
+
+# Ollama 会自动使用 GPU
+# 查看 GPU 使用情况
+watch -n 1 nvidia-smi
+```
+
+### 性能调优
+
+```bash
+# 设置并发请求数
+export OLLAMA_NUM_PARALLEL=4
+
+# 设置上下文长度
+export OLLAMA_MAX_LOADED_MODELS=2
+
+# 启用详细日志
+export OLLAMA_DEBUG=1
+```
+
+## 常见问题
+
+### 模型运行缓慢
+
+1. 检查是否使用了 GPU
+2. 尝试使用更小的模型（如 qwen:4b）
+3. 减少 num_predict 参数
+4. 关闭其他占用资源的应用
+
+### 内存不足
+
+```bash
+# 使用量化版本（更小的模型）
+ollama pull qwen:7b-q4_0  # 4-bit 量化
+ollama pull qwen:7b-q8_0  # 8-bit 量化
+
+# 或使用更小的模型
+ollama pull qwen:4b
+```
+
+### API 连接失败
+
+```bash
+# 检查服务是否运行
+curl http://localhost:11434/api/tags
+
+# 重启服务
+pkill ollama
+ollama serve
+```
+
+## 与其他模型对比
+
+```bash
+# 下载其他中文模型对比
+ollama pull llama3.1:8b      # Meta 的 Llama
+ollama pull glm4:9b          # 智谱的 GLM
+ollama pull deepseek:7b      # DeepSeek
+
+# 运行对比测试
+ollama run qwen:7b "解释一下什么是闭包"
+ollama run llama3.1:8b "解释一下什么是闭包"
+```
+
+## 实际应用场景
+
+1. 本地代码助手：集成到 IDE 中提供代码补全和解释
+2. 文档处理：总结长文档、提取关键信息
+3. 翻译工具：中英文互译
+4. 聊天机器人：构建私有化客服系统
+5. 内容生成：文章创作、邮件撰写
+6. 教育辅导：回答学习问题
+
+## 总结
+
+Ollama + Qwen 的组合提供了：
+- 便捷的本地部署方案
+- 良好的中文支持
+- 灵活的 API 集成
+- 数据隐私保护
+- 免费开源使用
+
+适合需要本地运行、保护隐私、或者构建离线 AI 应用的场景。
+
+## 相关资源
+
+- [Ollama 官网](https://ollama.ai)
+- [Ollama GitHub](https://github.com/ollama/ollama)
+- [Qwen 官方文档](https://github.com/QwenLM/Qwen)
+- [Ollama 模型库](https://ollama.ai/library)
+- [Qwen 技术报告](https://arxiv.org/abs/2309.16609)
+

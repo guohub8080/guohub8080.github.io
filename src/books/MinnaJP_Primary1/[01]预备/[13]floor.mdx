@@ -1,0 +1,120 @@
+export const title = "讲解：数字和楼层"
+import JPL from '@mdx/components/text/JPL';
+
+
+# {title}
+
+## 数字
+
+日语中的数字系统非常有趣，它完美体现了日语“和汉混交”的特性。我们今天主要讲解的是源自古汉语的**音读** (on-yo-mi) 数字系统，也就是大家最常听到的 ichi, ni, san。这套系统主要用于数学计算、电话号码、年份和价格。而另一套源自日本本土的**训读** (kun-yo-mi) 系统，如 <JPL preset={1}>一つ</JPL> (hi-to-tsu)、<JPL preset={1}>二つ</JPL> (fu-ta-tsu)，主要用于数东西的个数。
+
+### 汉字音读的一到十
+
+我们先看最基础的积木块：一到十。这些发音直接借用自古代中国，和现代汉语听起来依然很像。
+
+| 数字 | 平假名 | 片假名 | 罗马音 |
+| :--- | :--- | :--- | :--- |
+| <JPL>零</JPL> | <JPL>れい</JPL> / <JPL>ぜろ</JPL> | <JPL>レイ</JPL> / <JPL>ゼロ</JPL> | re-i / ze-ro |
+| <JPL>一</JPL> | <JPL>いち</JPL> | <JPL>イチ</JPL> | i-chi |
+| <JPL>二</JPL> | <JPL>に</JPL> | <JPL>ニ</JPL> | ni |
+| <JPL>三</JPL> | <JPL>さん</JPL> | <JPL>サン</JPL> | sa-n |
+| <JPL>四</JPL> | <JPL>よん</JPL> / <JPL>し</JPL> | <JPL>ヨン</JPL> / <JPL>シ</JPL> | yo-n / shi |
+| <JPL>五</JPL> | <JPL>ご</JPL> | <JPL>ゴ</JPL> | go |
+| <JPL>六</JPL> | <JPL>ろく</JPL> | <JPL>ロク</JPL> | ro-ku |
+| <JPL>七</JPL> | <JPL>なな</JPL> / <JPL>しち</JPL> | <JPL>ナナ</JPL> / <JPL>シチ</JPL> | na-na / shi-chi |
+| <JPL>八</JPL> | <JPL>はち</JPL> | <JPL>ハチ</JPL> | ha-chi |
+| <JPL>九</JPL> | <JPL>きゅう</JPL> / <JPL>く</JPL> | <JPL>キュウ</JPL> / <JPL>ク</JPL> | kyu-u / ku |
+| <JPL>十</JPL> | <JPL>じゅう</JPL> | <JPL>ジュウ</JPL> | ju-u |
+
+这里有一个语言学上的痛点：**四** (shi) 和 **七** (shi-chi) 因为发音包含 <JPL preset={1}>し</JPL> (shi)，这在日语中与“死”同音，被视为不吉利。加上 **七** (shi-chi) 听起来容易和 **一** (i-chi) 或 **八** (ha-chi) 混淆，所以现代日语中，**四** 常读作 <JPL preset={1}>よん</JPL> (yon)，**七** 常读作 <JPL preset={1}>なな</JPL> (na-na)，这其实是把日本本土的训读发音拿过来“救场”了。
+
+## 十一到九十九的组装
+
+
+日语的两位数构造逻辑非常简单，和中文完全一致，属于严谨的十进制。这在形态学上被称为**分析型** (analytic) 结构，你不需要像英语那样去记 *eleven* 或 *twenty* 这种变形词，只需要把积木拼起来。
+
+十几的数字，就是“十”后面加个位数。
+<JPL preset={1}>十一</JPL> (ju-u-i-chi)
+<JPL preset={1}>十九</JPL> (ju-u-kyu-u)
+
+几十的数字，就是把数字放在“十”前面做乘法。
+<JPL preset={1}>二十</JPL> (ni-ju-u)
+<JPL preset={1}>九十</JPL> (kyu-u-ju-u)
+
+几十几的数字，就是前乘后加。
+<JPL preset={1}>四十五</JPL> (yon-ju-u-go)
+
+
+<JPL preset={1}>全部で九十九ページあります。</JPL> (ze-n-bu-de-kyu-u-ju-u-kyu-u-pe-e-ji-a-ri-ma-su)
+总共有九十九页。
+There are ninety-nine pages in total.
+
+## 百位的音变秘密
+
+
+进入百位，单位是 <JPL preset={1}>百</JPL> (hya-ku)。这里涉及到一个非常核心的日语语音史现象：**哈行转呼**。
+
+在古代（奈良平安时期），<JPL preset={1}>は</JPL> 行的假名其实是发 **p** 音的。后来演变成了 **f** 音，最后才变成了现在的 **h** 音。所以 <JPL preset={1}>百</JPL> 最早读作 *pyaku*。
+
+这个古老的 **p** 音并没有完全消失，它隐藏在了促音变化中。当你读 <JPL preset={1}>六百</JPL>、<JPL preset={1}>八百</JPL> 时，为了发音方便，前面的音节急停，导致后面的 **h** 音瞬间“反祖”回到了强有力的 **p** 音。这在语言学上叫 **连音变化** (sandhi) 中的**强化**现象。
+
+<JPL preset={1}>三百</JPL> (sa-n-bya-ku)：<JPL preset={1}>ん</JPL> 后接 <JPL preset={1}>h</JPL> 容易发生浊音化，变成 *byaku*。
+<JPL preset={1}>六百</JPL> (ro-p-pya-ku)：发生促音变，*ku* 变成小 *tsu*，*hyaku* 变 *ppyaku*。
+<JPL preset={1}>八百</JPL> (ha-p-pya-ku)：同上，发生促音变。
+
+<JPL preset={1}>このパソコンは八百ドルです。</JPL> (ko-no-pa-so-ko-n-wa-ha-p-pya-ku-do-ru-de-su)
+这台电脑是八百美元。
+This computer costs eight hundred dollars.
+
+通常情况下，<JPL>一百</JPL> (i-chi-hya-ku) **不**读作 <JPL>いちひゃく</JPL> (i-chi-hya-ku)，因为 <JPL>百</JPL> (hya-ku) 本身就是数位单位的起点，就像中文里通常说“百”而不是“一百”一样。在日常口语和多数语境中，<JPL>百</JPL> (hya-ku) 默认就包含了“一”的含义。因此，直接读作 **<JPL>ひゃく</JPL> (hya-ku)** 是最标准、最自然的读法。
+
+然而，在某些非常正式、需要高度清晰或避免歧义的场合（例如金融交易、计数报告、广播报数等），为了明确强调这是 **1 x 100**，日本人有时会加上前面的 <JPL>一</JPL> (i-chi)。这种情况下，<JPL>一百</JPL> 读作 <JPL preset={1}>いっぴゃく</JPL> (i-p-pya-ku)。
+
+这里遵循了和 <JPL preset={1}>六百</JPL> (ro-p-pya-ku) 与 <JPL preset={1}>八百</JPL> (ha-p-pya-ku) 相同的**促音变** (Sokuon) 规律，前面的 <JPL>一</JPL> (i-chi) 的 *chi* 发生了脱落，变成了一个小 <JPL preset={1}>つ</JPL> (tsu)，强化了后面的 *p* 音。这确保了在长串数字中，<JPL preset={1}>百</JPL> 的单位不会被听漏。
+
+| 数字 | 平假名 | 片假名 | 罗马音 | 变化类型 |
+| :--- | :--- | :--- | :--- | :--- |
+| <JPL>百</JPL> | <JPL>ひゃく</JPL> | <JPL>ヒャク</JPL> | hya-ku | (起始单位) |
+| <JPL>二百</JPL> | <JPL>にひゃく</JPL> | <JPL>ニヒャク</JPL> | ni-hya-ku | |
+| <JPL preset={1}>三百</JPL> | <JPL preset={1}>さんびゃく</JPL> | <JPL preset={1}>サンビャク</JPL> | sa-n-bya-ku | **连浊** |
+| <JPL>四百</JPL> | <JPL>よんひゃく</JPL> | <JPL>ヨンヒャク</JPL> | yo-n-hya-ku | |
+| <JPL>五百</JPL> | <JPL>ごひゃく</JPL> | <JPL>ゴヒャク</JPL> | go-hya-ku | |
+| <JPL preset={1}>六百</JPL> | <JPL preset={1}>ろっぴゃく</JPL> | <JPL preset={1}>ロッピャク</JPL> | ro-p-pya-ku | **促音变** |
+| <JPL>七百</JPL> | <JPL>ななひゃく</JPL> | <JPL>ナナヒャク</JPL> | na-na-hya-ku | |
+| <JPL preset={1}>八百</JPL> | <JPL preset={1}>はっぴゃく</JPL> | <JPL preset={1}>ハッピャク</JPL> | ha-p-pya-ku | **促音变** |
+| <JPL>九百</JPL> | <JPL>きゅうひゃく</JPL> | <JPL>キュウヒャク</JPL> | kyu-u-hya-ku | |
+
+
+## 千位的浊音陷阱
+
+### 连浊现象
+
+千位的单位是 <JPL preset={1}>千</JPL> (se-n)。这里的特殊变化主要体现在 <JPL preset={1}>三千</JPL> 和 <JPL preset={1}>八千</JPL>。
+
+<JPL preset={1}>三千</JPL> (sa-n-ze-n)：这里发生了**连浊** (rendaku)。因为 <JPL preset={1}>三</JPL> (sa-n) 是以拨音 <JPL preset={1}>ん</JPL> 结尾的，这个鼻音震动了声带，导致紧接着的清音 *s* 被同化成了浊音 *z*。
+<JPL preset={1}>八千</JPL> (ha-s-se-n)：这里发生了促音变，为了读起来干脆有力，*chi* 脱落变成了促音。
+
+注意 <JPL preset={1}>一千</JPL> 通常直接读 <JPL preset={1}>千</JPL> (se-n)，但在强调数量或作为大数字开头时，也可以读 <JPL preset={1}>一千</JPL> (i-s-se-n)。
+
+### 语境应用
+
+<JPL preset={1}>三千円貸してください。</JPL> (sa-n-ze-n-e-n-ka-shi-te-ku-da-sa-i)
+请借给我三千日元。
+Please lend me three thousand yen.
+
+## 万与数位逻辑的差异
+
+### 四位一分 vs 三位一分
+
+<JPL preset={1}>万</JPL> (ma-n) 是日语数字逻辑与英语最大的分水岭。
+
+英语和西方数字系统是**三位一分** (Thousands, Millions, Billions)，每三个零换一个单词。
+日语和中文数字系统是**四位一分** (万、亿、兆)，每四个零换一个单词。
+
+这里有一个绝对不能踩的雷区：**10,000** 在日语中必须读作 <JPL preset={1}>一万</JPL> (i-chi-ma-n)，绝对不能省略前面的 <JPL preset={1}>一</JPL>。这与中文口语中可以说“万把块”或“一万”不同，日语必须精确指明是“一个万”。
+
+### 语境应用
+
+<JPL preset={1}>一万円札を持っていますか。</JPL> (i-chi-ma-n-e-n-sa-tsu-o-mo-t-te-i-ma-su-ka)
+你有一万日元的钞票吗？
+Do you have a ten-thousand yen bill?

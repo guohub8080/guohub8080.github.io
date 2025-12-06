@@ -1,0 +1,366 @@
+export const title = "域名解析与 DNS 记录详解";
+
+# {title}
+
+当您在浏览器中输入 `www.example.com` 时，浏览器是如何知道要连接到哪个服务器的 IP 地址的呢？这个过程就是域名解析（DNS Resolution），它是互联网运作的基础之一。
+
+## 什么是 DNS？
+
+DNS（Domain Name System，域名系统）是互联网的"电话簿"。它将人类容易记忆的域名（如 `google.com`）转换为计算机能理解的 IP 地址（如 `142.250.185.46`）。
+
+### 为什么需要 DNS？
+
+- 人类更容易记住 `google.com`，而不是 `142.250.185.46`
+- 服务器 IP 地址可能会变化，但域名可以保持不变
+- 一个域名可以指向多个 IP 地址，实现负载均衡
+
+## 域名解析流程
+
+当您访问一个网站时，DNS 解析大致经历以下步骤：
+
+```
+用户输入 www.example.com
+    ↓
+浏览器缓存（是否有记录？）
+    ↓
+操作系统缓存（是否有记录？）
+    ↓
+本地 DNS 服务器（通常是您的 ISP 提供）
+    ↓
+根域名服务器（告诉您 .com 的服务器在哪）
+    ↓
+顶级域名服务器（告诉您 example.com 的服务器在哪）
+    ↓
+权威域名服务器（返回 www.example.com 的 IP 地址）
+    ↓
+返回结果并缓存
+    ↓
+浏览器连接到目标服务器
+```
+
+整个过程通常在几十毫秒内完成，而且大多数情况下会直接命中缓存。
+
+## DNS 记录类型详解
+
+DNS 记录是存储在域名服务器上的信息，不同类型的记录有不同的用途。
+
+### A 记录（Address Record）
+
+A 记录是最基础也是最常用的记录类型，它将域名直接映射到一个 IPv4 地址。
+
+```
+类型: A
+主机记录: www
+记录值: 192.0.2.1
+TTL: 600
+```
+
+含义：`www.example.com` 指向 IP 地址 `192.0.2.1`
+
+使用场景：
+- 将您的网站域名指向服务器 IP
+- 设置子域名（如 `blog.example.com`）
+- 大多数网站的主要记录类型
+
+### AAAA 记录（IPv6 Address Record）
+
+AAAA 记录与 A 记录类似，但它指向 IPv6 地址而不是 IPv4。
+
+```
+类型: AAAA
+主机记录: www
+记录值: 2001:0db8:85a3:0000:0000:8a2e:0370:7334
+TTL: 600
+```
+
+含义：`www.example.com` 的 IPv6 地址
+
+使用场景：
+- 支持 IPv6 协议的网站
+- 通常与 A 记录同时存在，以兼容不同网络环境
+
+### CNAME 记录（Canonical Name Record）
+
+CNAME 是"别名"记录，它将一个域名指向另一个域名，而不是直接指向 IP 地址。
+
+```
+类型: CNAME
+主机记录: blog
+记录值: www.example.com
+TTL: 600
+```
+
+含义：`blog.example.com` 是 `www.example.com` 的别名，访问 `blog.example.com` 会自动解析到 `www.example.com` 的 IP
+
+使用场景：
+- CDN 配置：将 `cdn.example.com` 指向 CDN 服务商提供的域名
+- 多个子域名指向同一个地址：`www`、`blog`、`shop` 都指向主站
+- 简化管理：只需要更改目标域名的 A 记录，所有 CNAME 都会自动更新
+
+重要限制：
+- CNAME 记录不能与其他记录类型共存（例如根域名不能使用 CNAME）
+- 会增加一次额外的 DNS 查询（但通常可以忽略不计）
+
+### MX 记录（Mail Exchange Record）
+
+MX 记录指定处理该域名电子邮件的邮件服务器。
+
+```
+类型: MX
+主机记录: @
+记录值: mail.example.com
+优先级: 10
+TTL: 3600
+```
+
+含义：发送到 `user@example.com` 的邮件应该投递到 `mail.example.com`
+
+使用场景：
+- 配置企业邮箱（如 Google Workspace、Microsoft 365）
+- 自建邮件服务器
+- 可以设置多个 MX 记录作为备份，优先级数字越小越优先
+
+示例配置（Google Workspace）：
+
+```
+类型: MX, 优先级: 1, 值: aspmx.l.google.com
+类型: MX, 优先级: 5, 值: alt1.aspmx.l.google.com
+类型: MX, 优先级: 5, 值: alt2.aspmx.l.google.com
+```
+
+### TXT 记录（Text Record）
+
+TXT 记录用于存储任意文本信息，常用于验证域名所有权和配置各种服务。
+
+```
+类型: TXT
+主机记录: @
+记录值: "v=spf1 include:_spf.google.com ~all"
+TTL: 3600
+```
+
+使用场景：
+
+1. SPF（发件人策略框架）：防止邮件欺诈
+```
+v=spf1 include:_spf.google.com ~all
+```
+
+2. DKIM（域名密钥识别邮件）：邮件签名验证
+```
+v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...
+```
+
+3. DMARC（域名消息认证报告和一致性）：邮件认证策略
+```
+v=DMARC1; p=quarantine; rua=mailto:dmarc@example.com
+```
+
+4. 域名所有权验证（常见于各种云服务）
+```
+google-site-verification=abc123def456...
+```
+
+5. 网站验证和配置
+```
+verification-key=1234567890abcdef
+```
+
+### NS 记录（Name Server Record）
+
+NS 记录指定该域名由哪些域名服务器负责解析。
+
+```
+类型: NS
+主机记录: @
+记录值: ns1.example.com
+TTL: 86400
+```
+
+使用场景：
+- 将域名解析委托给特定的 DNS 服务器
+- 通常在域名注册商处配置
+- 一般有 2-4 个 NS 记录作为冗余
+
+### CAA 记录（Certification Authority Authorization）
+
+CAA 记录指定哪些证书颁发机构（CA）可以为该域名颁发 SSL/TLS 证书。
+
+```
+类型: CAA
+主机记录: @
+记录值: 0 issue "letsencrypt.org"
+TTL: 3600
+```
+
+使用场景：
+- 增强域名安全性
+- 防止未授权的 CA 颁发证书
+- 对于使用 Let's Encrypt 等服务的网站很有用
+
+### SRV 记录（Service Record）
+
+SRV 记录用于定义某个服务的位置（主机名和端口号）。
+
+```
+类型: SRV
+主机记录: _service._protocol
+记录值: 10 60 5060 sipserver.example.com
+TTL: 3600
+```
+
+使用场景：
+- VoIP 服务（如 SIP）
+- 即时通讯服务（如 XMPP）
+- 其他需要指定端口的服务
+
+## 常见 DNS 配置场景
+
+### 场景一：部署静态网站到 Cloudflare Pages
+
+```
+类型: CNAME
+主机记录: www
+记录值: your-project.pages.dev
+TTL: Auto
+
+类型: CNAME
+主机记录: @
+记录值: your-project.pages.dev
+TTL: Auto
+```
+
+注意：根域名 `@` 使用 CNAME 在某些 DNS 提供商可能不支持，这时可以使用 ALIAS 或 ANAME 记录（Cloudflare 支持）。
+
+### 场景二：配置企业邮箱（以腾讯企业邮为例）
+
+```
+类型: MX
+主机记录: @
+优先级: 5
+记录值: mxbiz1.qq.com
+
+类型: MX
+主机记录: @
+优先级: 10
+记录值: mxbiz2.qq.com
+
+类型: TXT
+主机记录: @
+记录值: v=spf1 include:spf.mail.qq.com ~all
+```
+
+### 场景三：CDN 加速配置
+
+```
+# 主站使用 A 记录
+类型: A
+主机记录: @
+记录值: 203.0.113.10
+
+# 静态资源使用 CDN
+类型: CNAME
+主机记录: static
+记录值: cdn-provider.com
+```
+
+### 场景四：子域名分流
+
+```
+# 主网站
+类型: A
+主机记录: www
+记录值: 192.0.2.1
+
+# 博客系统（部署在另一个服务器）
+类型: A
+主机记录: blog
+记录值: 192.0.2.2
+
+# API 服务
+类型: A
+主机记录: api
+记录值: 192.0.2.3
+
+# 开发环境
+类型: A
+主机记录: dev
+记录值: 192.0.2.4
+```
+
+## TTL（Time To Live）是什么？
+
+TTL 是 DNS 记录的"生存时间"，单位是秒。它决定了 DNS 解析结果会被缓存多久。
+
+```
+TTL: 600    →  缓存 10 分钟
+TTL: 3600   →  缓存 1 小时
+TTL: 86400  →  缓存 24 小时
+```
+
+如何选择 TTL 值？
+
+- 较短的 TTL（300-600 秒）：
+  - 优点：变更生效快
+  - 缺点：增加 DNS 查询负载
+  - 适用：准备迁移服务器、测试阶段
+  
+- 较长的 TTL（3600-86400 秒）：
+  - 优点：减少 DNS 查询，提升访问速度
+  - 缺点：变更生效慢
+  - 适用：稳定运行的生产环境
+
+建议：在修改 DNS 记录前，提前将 TTL 改小，等变更完成并稳定后再改回较大的值。
+
+## 实用技巧
+
+### 检查 DNS 解析结果
+
+在命令行中使用以下命令：
+
+```bash
+# Windows
+nslookup example.com
+
+# macOS / Linux
+dig example.com
+
+# 查询特定类型的记录
+dig example.com MX
+dig example.com TXT
+
+# 查询从特定 DNS 服务器的结果
+dig @8.8.8.8 example.com
+```
+
+### 常见问题排查
+
+1. DNS 记录修改后不生效？
+   - 等待 TTL 时间过期
+   - 清除本地 DNS 缓存：`ipconfig /flushdns`（Windows）或 `sudo dscacheutil -flushcache`（macOS）
+
+2. 根域名（@）无法使用 CNAME？
+   - 使用 A 记录指向 IP 地址
+   - 或使用支持 CNAME 扁平化的 DNS 服务商（如 Cloudflare）
+
+3. 网站可以用 `www` 访问但不能用根域名访问？
+   - 检查根域名的 A 或 CNAME 记录是否正确配置
+   - 确认是否做了重定向配置
+
+## 总结
+
+DNS 记录类型总览：
+
+| 记录类型 | 用途 | 示例值 |
+|---------|------|--------|
+| A | IPv4 地址 | 192.0.2.1 |
+| AAAA | IPv6 地址 | 2001:db8::1 |
+| CNAME | 域名别名 | www.example.com |
+| MX | 邮件服务器 | mail.example.com |
+| TXT | 文本信息/验证 | v=spf1 include:_spf.google.com ~all |
+| NS | 域名服务器 | ns1.example.com |
+| CAA | 证书授权 | 0 issue "letsencrypt.org" |
+| SRV | 服务位置 | 10 60 5060 server.example.com |
+
+理解 DNS 记录是 Web 开发的重要基础知识。正确配置 DNS 不仅能让您的网站正常运行，还能提升性能、增强安全性。
+

@@ -1,0 +1,657 @@
+export const title = "Fetch vs Axios 与 React";
+
+# {title}
+
+在 React 应用中，与后端 API 进行数据交互是最常见的需求。fetch 和 axios 是两种最流行的 HTTP 请求方式，本文将对比它们的特点，并展示如何在 React 中使用。
+
+## Fetch API
+
+fetch 是浏览器原生提供的 API，无需额外安装任何库即可使用。
+
+### 基本用法
+
+```javascript
+// GET 请求
+fetch('https://api.example.com/users')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+
+// POST 请求
+fetch('https://api.example.com/users', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    name: '张三',
+    email: 'zhangsan@example.com'
+  })
+})
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));
+```
+
+### Fetch 的特点
+
+优点：
+- 原生支持，无需安装额外库
+- 基于 Promise，支持 async/await
+- 支持流式传输
+- 现代浏览器都支持
+
+缺点：
+- 需要手动转换响应数据（`response.json()`）
+- 错误处理不够直观（HTTP 错误状态码不会被 reject）
+- 不支持请求取消（需要使用 AbortController）
+- 没有请求/响应拦截器
+- 不支持进度监测
+- 默认不带 cookie（需要手动设置）
+
+## Axios
+
+axios 是一个基于 Promise 的 HTTP 客户端库，提供了更丰富的功能。
+
+### 安装
+
+```bash
+npm install axios
+# 或
+pnpm add axios
+```
+
+### 基本用法
+
+```javascript
+import axios from 'axios';
+
+// GET 请求
+axios.get('https://api.example.com/users')
+  .then(response => console.log(response.data))
+  .catch(error => console.error('Error:', error));
+
+// POST 请求
+axios.post('https://api.example.com/users', {
+  name: '张三',
+  email: 'zhangsan@example.com'
+})
+  .then(response => console.log(response.data))
+  .catch(error => console.error('Error:', error));
+```
+
+### Axios 的特点
+
+优点：
+- 自动转换 JSON 数据
+- 更好的错误处理（HTTP 错误状态码会被 reject）
+- 支持请求和响应拦截器
+- 支持请求取消
+- 支持进度监测
+- 自动转换请求和响应数据
+- 客户端支持防御 XSRF
+- 同时支持浏览器和 Node.js
+
+缺点：
+- 需要额外安装（增加了项目体积）
+- 需要学习额外的 API
+
+## 在 React 中使用 Fetch
+
+### 使用 useEffect
+
+```jsx
+import { useState, useEffect } from 'react';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetch('https://api.example.com/users')
+      .then(response => {
+        // 检查响应状态
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setUsers(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        setError(error.message);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 使用 async/await
+
+```jsx
+import { useState, useEffect } from 'react';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('https://api.example.com/users');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## 在 React 中使用 Axios
+
+### 基本使用
+
+```jsx
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    axios.get('https://api.example.com/users')
+      .then(response => {
+        setUsers(response.data);
+        setLoading(false);
+      })
+      .catch(error => {
+        setError(error.message);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### 配置 Axios 实例
+
+```javascript
+// api.js
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'https://api.example.com',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// 请求拦截器
+api.interceptors.request.use(
+  config => {
+    // 添加 token
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(error);
+  }
+);
+
+// 响应拦截器
+api.interceptors.response.use(
+  response => {
+    return response.data;
+  },
+  error => {
+    if (error.response?.status === 401) {
+      // 处理未授权
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+### 使用配置好的实例
+
+```jsx
+import { useState, useEffect } from 'react';
+import api from './api';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await api.get('/users');
+        setUsers(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## 自定义 Hook 封装
+
+### useFetch Hook
+
+```javascript
+import { useState, useEffect } from 'react';
+
+function useFetch(url, options = {}) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(url, options);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        setError(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// 使用
+function UserList() {
+  const { data: users, loading, error } = useFetch('https://api.example.com/users');
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error.message}</div>;
+
+  return (
+    <ul>
+      {users?.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### useAxios Hook
+
+```javascript
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function useAxios(url, options = {}) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const source = axios.CancelToken.source();
+
+    const fetchData = async () => {
+      try {
+        const response = await axios({
+          url,
+          ...options,
+          cancelToken: source.token
+        });
+        setData(response.data);
+      } catch (error) {
+        if (!axios.isCancel(error)) {
+          setError(error);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // 清理函数：取消请求
+    return () => {
+      source.cancel('组件卸载，取消请求');
+    };
+  }, [url]);
+
+  return { data, loading, error };
+}
+
+// 使用
+function UserList() {
+  const { data: users, loading, error } = useAxios('https://api.example.com/users');
+
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error.message}</div>;
+
+  return (
+    <ul>
+      {users?.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## 完整的增删改查示例
+
+### 使用 Axios
+
+```jsx
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'https://api.example.com'
+});
+
+function UserManager() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({ name: '', email: '' });
+
+  // 获取用户列表
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data);
+    } catch (error) {
+      alert('获取用户列表失败: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 创建用户
+  const createUser = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await api.post('/users', formData);
+      setUsers([...users, response.data]);
+      setFormData({ name: '', email: '' });
+      alert('用户创建成功');
+    } catch (error) {
+      alert('创建用户失败: ' + error.message);
+    }
+  };
+
+  // 更新用户
+  const updateUser = async (id, updatedData) => {
+    try {
+      const response = await api.put(`/users/${id}`, updatedData);
+      setUsers(users.map(user => 
+        user.id === id ? response.data : user
+      ));
+      alert('用户更新成功');
+    } catch (error) {
+      alert('更新用户失败: ' + error.message);
+    }
+  };
+
+  // 删除用户
+  const deleteUser = async (id) => {
+    if (!confirm('确定要删除这个用户吗？')) return;
+    
+    try {
+      await api.delete(`/users/${id}`);
+      setUsers(users.filter(user => user.id !== id));
+      alert('用户删除成功');
+    } catch (error) {
+      alert('删除用户失败: ' + error.message);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  return (
+    <div>
+      <h2>用户管理</h2>
+      
+      {/* 创建表单 */}
+      <form onSubmit={createUser}>
+        <input
+          type="text"
+          placeholder="姓名"
+          value={formData.name}
+          onChange={e => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
+        <input
+          type="email"
+          placeholder="邮箱"
+          value={formData.email}
+          onChange={e => setFormData({ ...formData, email: e.target.value })}
+          required
+        />
+        <button type="submit">创建用户</button>
+      </form>
+
+      {/* 用户列表 */}
+      {loading ? (
+        <div>加载中...</div>
+      ) : (
+        <ul>
+          {users.map(user => (
+            <li key={user.id}>
+              {user.name} ({user.email})
+              <button onClick={() => deleteUser(user.id)}>删除</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+```
+
+## Fetch vs Axios 对比表
+
+| 特性 | Fetch | Axios |
+|-----|-------|-------|
+| 安装 | 原生支持 | 需要安装 |
+| JSON 转换 | 需要手动 `response.json()` | 自动转换 |
+| 错误处理 | HTTP 错误不会 reject | HTTP 错误会 reject |
+| 请求取消 | 需要 AbortController | 内置 CancelToken |
+| 拦截器 | 不支持 | 支持 |
+| 进度监测 | 不支持 | 支持 |
+| 超时设置 | 需要手动实现 | 内置支持 |
+| Cookie | 需要手动设置 | 默认发送 |
+| 浏览器支持 | 现代浏览器 | 所有浏览器 |
+
+## 如何选择？
+
+### 选择 Fetch 的场景
+
+- 简单的 GET/POST 请求
+- 不想增加项目依赖
+- 项目很小，功能简单
+- 只需要基础的 HTTP 功能
+
+### 选择 Axios 的场景
+
+- 需要请求/响应拦截器（如统一添加 token）
+- 需要请求取消功能
+- 需要上传/下载进度监测
+- 需要更好的错误处理
+- 大型项目，需要统一的 API 管理
+
+## 最佳实践
+
+ 1. 封装 API 请求：将所有 API 请求封装到单独的文件中
+ 
+   ```javascript
+   // services/userService.js
+   import api from './api';
+   
+   export const userService = {
+     getAll: () => api.get('/users'),
+     getById: (id) => api.get(`/users/${id}`),
+     create: (data) => api.post('/users', data),
+     update: (id, data) => api.put(`/users/${id}`, data),
+     delete: (id) => api.delete(`/users/${id}`)
+   };
+   ```
+
+ 2. 使用自定义 Hook：封装通用的数据获取逻辑
+ 3. 统一错误处理：使用拦截器或包装函数统一处理错误
+ 4. 使用 TypeScript：为请求和响应添加类型定义
+   ```typescript
+   interface User {
+     id: number;
+     name: string;
+     email: string;
+   }
+   
+   const getUsers = async (): Promise<User[]> => {
+     const response = await api.get<User[]>('/users');
+     return response.data;
+   };
+   ```
+
+ 5. 考虑使用数据获取库：如 React Query、SWR 等，它们提供了缓存、重试、轮询等高级功能
+
+## React Query 示例
+
+React Query 是一个强大的数据获取库，推荐在大型项目中使用：
+
+```jsx
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+
+function UserList() {
+  const queryClient = useQueryClient();
+
+  // 查询
+  const { data: users, isLoading, error } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => axios.get('/users').then(res => res.data)
+  });
+
+  // 创建
+  const createMutation = useMutation({
+    mutationFn: (newUser) => axios.post('/users', newUser),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+
+  // 删除
+  const deleteMutation = useMutation({
+    mutationFn: (id) => axios.delete(`/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+
+  if (isLoading) return <div>加载中...</div>;
+  if (error) return <div>错误: {error.message}</div>;
+
+  return (
+    <ul>
+      {users?.map(user => (
+        <li key={user.id}>
+          {user.name}
+          <button onClick={() => deleteMutation.mutate(user.id)}>
+            删除
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+---
+
+*选择合适的 HTTP 客户端工具，能够让你的 React 应用更加健壮和易于维护。*
+

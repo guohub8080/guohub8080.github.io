@@ -1,0 +1,288 @@
+import stageIdentifier  from '@dev/tonicml/types/stageIdentifier';
+
+export const title = `S1_${stageIdentifier.s1}`
+
+# {title} 
+
+TonicML 编译流程的第一个阶段是 **{stageIdentifier.s1}**（文本转块 / Text to Blocks），将原始文本字符串分割成带位置信息的块数组。
+
+## 设计原则
+
+S1 阶段采用分发器模式（Dispatcher Pattern）：
+
+- 主函数只做协调：`s1_main_fn` 只负责协调各个处理步骤
+- 具体逻辑在 utils 中：所有处理逻辑拆分到独立的工具函数
+- 函数式编程：所有 utils 都不修改输入，返回新对象
+- 逐步拆解：按处理阶段拆分，便于测试和维护
+
+## 主要任务
+
+S1 阶段只做分块和冗余过滤，不进行任何内容验证（除了基本的空内容检查）：
+
+- 将原始文本按照特定规则分割成块（Block）
+- 为每个块记录精确的位置信息（行号、列号、偏移量）
+- 过滤掉冗余的空行、逗号和分号
+
+## 数据结构
+
+每个块（BlockWithPosition）包含以下信息：
+
+```typescript
+export interface BlockWithPosition {
+    value: string;              // 块的内容
+    line: number;               // 行号（从1开始）
+    column: number;             // 列号（从1开始）
+    offset: number;             // 在原始文本中的绝对位置（从0开始）
+    length: number;             // 块的长度
+    contains_braces: boolean;   // 是否包含花括号
+}
+```
+
+## 处理流程
+
+S1 阶段分为两个步骤：
+
+### 粗糙分块
+
+第一步：粗糙分块（Split Rough Blocks）。纯粹的分块逻辑，不加任何验证。逐字符扫描原始文本，根据花括号感知的规则进行分割。
+
+#### 分割规则
+
+- 换行符 `\n` `\r` `\r\n`：强制分割，**统一转换为 `\n`** 并成为独立块，重置花括号状态
+  - Windows 的 `\r\n` 会被识别为单个 `\n` 块
+  - 旧版 Mac 的 `\r` 也会被识别为 `\n` 块
+  - 确保跨平台一致性
+- 空格/Tab：在 `{}` 外作为分隔符触发分割，在 `{}` 内作为内容的一部分
+- 逗号/分号 `,` `;`：在 `{}` 外强制分割成为独立块，在 `{}` 内作为内容的一部分
+- 中文逗号/分号 `，` `；`：在 `{}` 外自动转换为英文并生成警告，在 `{}` 内保持原样
+- 普通字符：累积到当前块，同时跟踪花括号状态（`{` 增加深度，`}` 减少深度）
+
+#### 花括号状态追踪
+
+```typescript
+interface BlockSplitState {
+    insideBraces: boolean;  // 是否在花括号内
+    braceDepth: number;     // 花括号嵌套深度
+    // ... 其他字段
+}
+```
+
+- 遇到 `{`：深度 +1，标记为在花括号内
+- 遇到 `}`：深度 -1，如果深度为 0 则标记为不在花括号内
+- 遇到 `\n`：重置花括号状态
+
+#### 示例
+
+```
+输入：cdf,a b{x,y};c
+```
+
+分割结果：
+```javascript
+["cdf", ",", "a", "b{x,y}", ";", "c"]
+```
+
+注意：
+- `{x,y}` 内的逗号不会触发分割
+- 每个块都有完整的位置信息
+
+#### 中文标点处理
+
+```
+输入：cdf，a b{x，y}；c
+```
+
+分割结果：
+```javascript
+["cdf", ",", "a", "b{x，y}", ";", "c"]
+```
+
+警告：
+- `{}` 外的中文逗号/分号会自动转为英文并生成警告
+- `{}` 内的中文逗号/分号保持原样
+
+### 第二步：冗余块过滤（filterRedundantBlocks）
+
+移除多余的空行、逗号和分号，不进行任何验证。
+
+#### 过滤规则
+
+- 移除开头：移除文档开头的所有 `\n`、`,`、`;`
+- 移除连续：连续的相同特殊字符只保留第一个
+
+#### 示例
+
+请注意，以下内容非为按照TonicML真实语法，只是为了解释算法。
+
+```javascript
+// 输入
+["\n", ",", "a", ",", ",", "b", "\n", "\n", "c", ";", ";"]
+
+// 输出
+["a", ",", "b", "\n", "c", ";"]
+```
+
+说明：
+- 开头的 `\n` 和 `,` 被移除
+- 连续的 `,` 只保留第一个
+- 连续的 `\n` 只保留第一个
+- 连续的 `;` 只保留第一个
+
+#### 警告策略
+
+采用合并警告策略，避免产生大量重复日志。最多生成 4 个合并警告：
+
+- 开头过滤警告（WARNING）：如果有开头字符被移除
+- 连续逗号警告（WARNING）：如果有连续逗号被移除
+- 连续分号警告（WARNING）：如果有连续分号被移除
+- 连续换行信息（INFO）：如果有连续换行被移除
+
+每个警告都会列出所有被过滤的位置：
+
+```
+已自动过滤掉3个多余的逗号。被自动过滤的代码分别在2行5列、2行7列、3行1列。
+```
+
+## 位置追踪
+
+S1 阶段会精确追踪每个字符的位置：
+
+```typescript
+// 输入文本：
+C D
+E F
+```
+
+分块结果：
+```javascript
+[
+  { value: "C", line: 1, column: 1, offset: 0, length: 1 },
+  { value: "D", line: 1, column: 3, offset: 2, length: 1 },
+  { value: "\n", line: 1, column: 4, offset: 3, length: 1 },
+  { value: "E", line: 2, column: 1, offset: 4, length: 1 },
+  { value: "F", line: 2, column: 3, offset: 6, length: 1 }
+]
+```
+
+说明：
+- `line` 和 `column` 从 1 开始
+- `offset` 从 0 开始
+- 换行符后，行号 +1，列号重置为 1
+
+## 基本输入验证
+
+S1 阶段只做一个基本验证：
+
+```typescript
+if (rawText.trim().length === 0) {
+    // 返回错误：输入文本为空或只包含空白字符
+}
+```
+
+**仅此而已**。不做其他任何验证。
+
+## 完整示例
+
+```
+// 输入：
+，
+cdf，a b{x，y}；c
+d，，e
+```
+
+处理过程：
+
+**第一步：粗糙分块**
+```javascript
+[
+  "，",           // 中文逗号，转为英文（警告）
+  "\n",
+  "cdf",
+  "，",           // 中文逗号，转为英文（警告）
+  "a",
+  "b{x，y}",      // {}内的中文逗号保持原样
+  "；",           // 中文分号，转为英文（警告）
+  "c",
+  "\n",
+  "d",
+  "，",           // 中文逗号，转为英文（警告）
+  "，",           // 中文逗号，转为英文（警告）
+  "e"
+]
+```
+
+**第二步：冗余块过滤**
+```javascript
+[
+  "cdf",         // 开头的逗号和换行被移除
+  ",",
+  "a",
+  "b{x，y}",
+  ";",
+  "c",
+  "\n",
+  "d",
+  ",",           // 连续逗号只保留第一个
+  "e"
+]
+```
+
+警告信息（共 3 个）：
+- 中文标点警告（5 个中文标点被转换）
+- 开头过滤警告（1 个逗号 + 1 个换行被移除）
+- 连续逗号警告（1 个连续逗号被移除）
+
+## 函数式设计
+
+所有工具函数都遵循函数式编程原则：
+
+```typescript
+// ❌ 不好：修改输入
+const processChar = (state: State, char: string) => {
+    state.currentBlock += char;  // 直接修改
+    return state;
+}
+
+// ✅ 好：返回新对象
+const processChar = (state: State, char: string) => {
+    return {
+        ...state,
+        currentBlock: state.currentBlock + char
+    };
+}
+```
+
+## 时间统计
+
+S1 阶段使用包装器模式添加时间统计：
+
+```typescript
+const s1_main_fn_with_time = (rawText: string) => {
+    const startTime = performance.now();
+    const result = s1_main_fn(rawText);
+    const endTime = performance.now();
+    
+    return {
+        ...result,
+        duration_ms: endTime - startTime
+    };
+};
+```
+
+## 输出格式
+
+```typescript
+interface StageResult<T> {
+    stageId: number;           // 1
+    result: T;                 // BlockWithPosition[]
+    isValid: boolean;          // 是否成功
+    log: DebugMessage[];       // 日志数组
+    duration_ms: number;       // 执行时间（毫秒）
+}
+```
+
+## 下一步
+
+S1 阶段完成后，块数组会传递给 **S2 阶段（基础 Token 识别）** 进行进一步处理。
+
+S2 阶段会对块进行验证和分类，识别出各种 Token 类型。

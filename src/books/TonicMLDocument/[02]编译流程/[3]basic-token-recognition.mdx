@@ -1,0 +1,357 @@
+import stageIdentifier from '@dev/tonicml/types/stageIdentifier';
+
+export const title = `S2_${stageIdentifier.s2}`
+
+# {title}
+
+TonicML 编译流程的第二个阶段是 `BASIC_TOKEN_RECOGNITION`（基础 Token 识别），将 S1 阶段产生的块数组转换为语义化的 Token 数组。
+
+## 主要任务
+
+S2 阶段的主要任务是类型识别，不做拆分和验证：
+
+- 将每个 Block 识别为特定类型的 Token
+- 保持 Block 与 Token 的 1:1 对应关系
+- 保留精确的源码位置信息
+- 不进行任何内容验证或拆分
+
+## Token 数据结构
+
+每个 Token 包含三个标准字段：
+
+```typescript
+interface Token {
+    type: TokenType;       // Token 类型
+    value: string;         // 原始文本内容
+    position: Position;    // 位置信息
+}
+```
+
+### 位置信息
+
+```typescript
+interface Position {
+    line: number;      // 行号（从1开始）
+    column: number;    // 列号（从1开始）
+    offset: number;    // 字符偏移量（从0开始）
+    length: number;    // Token 长度
+}
+```
+
+## Token 类型
+
+S2 阶段定义了 10 种 Token 类型：
+
+```typescript
+enum TokenType {
+    ACTION = 'ACTION',                      // 动作指令
+    COMMENT = 'COMMENT',                    // 注释
+    SPECIAL_NOTE = 'SPECIAL_NOTE',          // 特殊音符
+    CHORD_SCOPE_MARK = 'CHORD_SCOPE_MARK',  // 和弦作用域标记
+    NOTE = 'NOTE',                          // 普通音符
+    MEASURE_BREAK = 'MEASURE_BREAK',        // 小节间断
+    PHRASE_BREAK = 'PHRASE_BREAK',          // 乐句间断
+    TIE_START = 'TIE_START',                // 连线开始
+    TIE_END = 'TIE_END',                    // 连线结束
+    NEWLINE = 'NEWLINE'                     // 换行符
+}
+```
+
+## 识别规则
+
+S2 阶段根据 Block 的开头字符识别类型：
+
+- `$` 开头 → `ACTION`（动作指令，如 `$tempo`、`$key`）
+- `@` 开头 → `COMMENT`（注释，如 `@这是注释`）
+- `&` 开头 → `SPECIAL_NOTE`（特殊音符，如 `&rest`、`&c{}`）
+- `[` 开头 → `CHORD_SCOPE_MARK`（和弦作用域标记，如 `[C]`）
+- `\n` 或 `\r` → `NEWLINE`（换行符）
+- `,` → `MEASURE_BREAK`（小节间断）
+- `;` → `PHRASE_BREAK`（乐句间断）
+- `(` → `TIE_START`（连线开始）
+- `)` → `TIE_END`（连线结束）
+- 其他 → `NOTE`（普通音符，如 `1`、`2{key=C}`、`3456`）
+
+## 处理流程
+
+S2 阶段的处理流程非常简单：
+
+### 输入验证
+
+检查 S1 阶段的结果是否有效：
+
+```typescript
+if (!s1Result.is_valid) {
+    // S1 失败，S2 跳过处理
+    return buildStageResult({
+        stageId: 2,
+        result: [],
+        isValid: false,
+        log: [跳过信息]
+    });
+}
+```
+
+### 块转换
+
+逐个将 Block 转换为 Token：
+
+```typescript
+for (const block of blocks) {
+    const token = parseBlock(block);
+    tokens.push(token);
+}
+```
+
+`parseBlock` 函数根据 Block 的内容特征识别类型：
+
+```typescript
+const parseBlock = (block: BlockWithPosition): Token => {
+    const position = {
+        line: block.line,
+        column: block.column,
+        offset: block.offset,
+        length: block.length
+    };
+    
+    // 根据开头字符或内容识别类型
+    if (block.value === '\n' || block.value === '\r') {
+        return { type: 'NEWLINE', value: block.value, position };
+    }
+    
+    if (block.value === ',') {
+        return { type: 'MEASURE_BREAK', value: block.value, position };
+    }
+    
+    if (block.value === ';') {
+        return { type: 'PHRASE_BREAK', value: block.value, position };
+    }
+    
+    if (block.value === '(') {
+        return { type: 'TIE_START', value: block.value, position };
+    }
+    
+    if (block.value === ')') {
+        return { type: 'TIE_END', value: block.value, position };
+    }
+    
+    if (block.value.startsWith('$')) {
+        return { type: 'ACTION', value: block.value, position };
+    }
+    
+    if (block.value.startsWith('@')) {
+        return { type: 'COMMENT', value: block.value, position };
+    }
+    
+    if (block.value.startsWith('&')) {
+        return { type: 'SPECIAL_NOTE', value: block.value, position };
+    }
+    
+    if (block.value.startsWith('[')) {
+        return { type: 'CHORD_SCOPE_MARK', value: block.value, position };
+    }
+    
+    // 默认为普通音符
+    return { type: 'NOTE', value: block.value, position };
+};
+```
+
+### 返回结果
+
+构建标准的阶段结果：
+
+```typescript
+return buildStageResult({
+    stageId: 2,
+    result: tokens,
+    isValid: true,
+    log: logs,
+    duration_ms: 0
+});
+```
+
+## 完整示例
+
+输入（S1 的 Blocks）：
+
+```javascript
+[
+  { value: "$tempo", line: 1, column: 1, offset: 0, length: 6 },
+  { value: "1", line: 1, column: 8, offset: 7, length: 1 },
+  { value: "\n", line: 1, column: 9, offset: 8, length: 1 },
+  { value: "2", line: 4, column: 1, offset: 11, length: 1 },
+  { value: ",", line: 4, column: 2, offset: 12, length: 1 },
+  { value: "3", line: 4, column: 3, offset: 13, length: 1 }
+]
+```
+
+> **注意**：S1 阶段已经过滤掉了连续的换行符、逗号和分号，所以 S2 阶段的输入不会包含连续的相同特殊字符。
+
+输出（S2 的 Tokens）：
+
+```javascript
+[
+  {
+    type: "ACTION",
+    value: "$tempo",
+    position: { line: 1, column: 1, offset: 0, length: 6 }
+  },
+  {
+    type: "NOTE",
+    value: "1",
+    position: { line: 1, column: 8, offset: 7, length: 1 }
+  },
+  {
+    type: "NEWLINE",
+    value: "\n",
+    position: { line: 1, column: 9, offset: 8, length: 1 }
+  },
+  {
+    type: "NOTE",
+    value: "2",
+    position: { line: 4, column: 1, offset: 11, length: 1 }
+  },
+  {
+    type: "MEASURE_BREAK",
+    value: ",",
+    position: { line: 4, column: 2, offset: 12, length: 1 }
+  },
+  {
+    type: "NOTE",
+    value: "3",
+    position: { line: 4, column: 3, offset: 13, length: 1 }
+  }
+]
+```
+
+## 核心元素组
+
+S2 定义了三种核心元素类型，它们是 TonicML 最核心的音乐表达元素：
+
+```typescript
+const CoreElementTypes = [
+    TokenType.NOTE,              // 普通音符
+    TokenType.SPECIAL_NOTE,      // 特殊音符
+    TokenType.CHORD_SCOPE_MARK   // 和弦作用域标记
+] as const;
+```
+
+提供辅助函数判断是否为核心元素：
+
+```typescript
+// 判断类型是否为核心元素
+function isCoreElement(tokenType: TokenType): boolean {
+    return CoreElementTypes.includes(tokenType);
+}
+
+// 判断 Token 对象是否为核心元素
+function isTokenCoreElement(token: Token): boolean {
+    return isCoreElement(token.type);
+}
+```
+
+## 类型约束
+
+S2 阶段输出的 Token 类型受到严格约束：
+
+```typescript
+// S2 只能产生 CommonTokenType 或 BasicTokenType
+type S2TokenType = CommonTokenType | BasicTokenType;
+
+// S2 Token 接口
+interface S2Token {
+    position: Position;
+    type: S2TokenType;      // 只能是 S2 允许的类型
+    value: string;
+}
+
+// S2 阶段结果类型
+type S2Result = StageResult<S2Token[]>;
+```
+
+## 设计特点
+
+### 简单转换
+
+S2 不做复杂的处理，只做简单的类型识别：
+
+- 每个 Block 对应一个 Token
+- 不拆分 Block
+- 不合并 Block
+- 不验证内容
+
+### 位置保持
+
+所有 Token 都保持精确的源码位置：
+
+- 直接复制 Block 的位置信息
+- 确保后续阶段能追溯到源码位置
+
+### 类型安全
+
+通过 TypeScript 类型系统确保类型正确：
+
+- 使用枚举定义所有可能的类型
+- 使用类型约束限制输出类型
+- 编译时检查类型错误
+
+## 日志记录
+
+S2 阶段记录以下日志：
+
+### 阶段开始
+
+```typescript
+buildDebugMessage({
+    type: LogType.INFO,
+    tag: STAGE_START,
+    message: `S2_BASIC_TOKEN_RECOGNITION 开始。`
+})
+```
+
+### 阶段结束
+
+```typescript
+buildDebugMessage({
+    type: LogType.INFO,
+    tag: STAGE_END,
+    message: `S2完成: 转换了${tokens.length}个Token（输入块：${blocks.length}个）`,
+    extra_data: { 
+        tokenCount: tokens.length,
+        inputBlockCount: blocks.length
+    }
+})
+```
+
+### S1 失败跳过
+
+```typescript
+buildDebugMessage({
+    type: LogType.INFO,
+    tag: 'STAGE_SKIP',
+    message: `S1_TEXT_TO_BLOCKS阶段失败，S2_BASIC_TOKEN_RECOGNITION阶段跳过处理。`
+})
+```
+
+### 异常错误
+
+```typescript
+buildDebugMessage({
+    type: LogType.ERROR,
+    tag: "UNEXPECTED_ERROR",
+    message: `S1_TEXT_TO_BLOCKS阶段声称成功但未产生任何块，这是异常情况。`
+})
+```
+
+## 性能特征
+
+- 时间复杂度：O(n)，其中 n 是 Block 数量
+- 空间复杂度：O(n)，用于存储 Token 数组
+- 处理非常快速，因为只做简单的类型识别
+
+## 下一步
+
+S2 阶段完成后，Token 数组会传递给 S3 阶段（语法错误过滤）进行进一步处理。
+
+S3 阶段会验证 Token 的内容是否符合语法规则，过滤掉无效的 Token。
+

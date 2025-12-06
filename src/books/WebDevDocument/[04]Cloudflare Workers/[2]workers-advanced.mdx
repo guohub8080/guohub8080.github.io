@@ -1,0 +1,661 @@
+export const title = "Cloudflare Workers 高级用法";
+
+# {title}
+
+深入了解 Cloudflare Workers 的高级特性，包括 KV 存储、Durable Objects、Cron 触发器等。
+
+## KV 存储
+
+Cloudflare Workers KV 是一个全球分布的键值存储系统，适合存储配置、缓存等数据。
+
+### TypeScript + KV 示例
+
+```typescript
+interface Env {
+  MY_KV: KVNamespace;
+  CACHE_TTL: string;
+}
+
+interface CachedData {
+  value: any;
+  timestamp: number;
+  ttl: number;
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    const cacheKey = `cache:${url.pathname}`;
+    
+    // 从 KV 读取
+    const cached = await env.MY_KV.get<CachedData>(cacheKey, 'json');
+    
+    if (cached && Date.now() - cached.timestamp < cached.ttl) {
+      return Response.json({
+        data: cached.value,
+        cached: true,
+        age: Date.now() - cached.timestamp
+      });
+    }
+    
+    // 获取新数据
+    const freshData = { message: 'Fresh data', time: new Date().toISOString() };
+    
+    // 写入 KV
+    const dataToCache: CachedData = {
+      value: freshData,
+      timestamp: Date.now(),
+      ttl: parseInt(env.CACHE_TTL || '3600') * 1000
+    };
+    
+    // 使用 waitUntil 确保写入完成，但不阻塞响应
+    ctx.waitUntil(
+      env.MY_KV.put(cacheKey, JSON.stringify(dataToCache), {
+        expirationTtl: 3600 // 1小时后自动过期
+      })
+    );
+    
+    return Response.json({
+      data: freshData,
+      cached: false
+    });
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+### KV 操作完整指南
+
+```typescript
+// 写入操作
+await env.MY_KV.put('key', 'value');
+await env.MY_KV.put('key', 'value', { expirationTtl: 60 }); // 60秒后过期
+await env.MY_KV.put('key', JSON.stringify({ data: 'object' }));
+
+// 读取操作
+const value = await env.MY_KV.get('key'); // 返回字符串
+const json = await env.MY_KV.get('key', 'json'); // 自动解析 JSON
+const buffer = await env.MY_KV.get('key', 'arrayBuffer'); // 二进制数据
+
+// 删除操作
+await env.MY_KV.delete('key');
+
+// 列出键
+const list = await env.MY_KV.list({ prefix: 'user:' });
+for (const key of list.keys) {
+  console.log(key.name);
+}
+```
+
+## 请求和响应处理
+
+### 处理表单数据
+
+```typescript
+export default {
+  async fetch(request: Request): Promise<Response> {
+    if (request.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+    
+    const contentType = request.headers.get('content-type') || '';
+    
+    // JSON 数据
+    if (contentType.includes('application/json')) {
+      const data = await request.json();
+      return Response.json({ received: data });
+    }
+    
+    // 表单数据
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      const formData = await request.formData();
+      const result: Record<string, string> = {};
+      for (const [key, value] of formData) {
+        result[key] = value.toString();
+      }
+      return Response.json({ received: result });
+    }
+    
+    // multipart/form-data（文件上传）
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const files: string[] = [];
+      
+      for (const [key, value] of formData) {
+        if (value instanceof File) {
+          files.push(`${key}: ${value.name} (${value.size} bytes)`);
+        }
+      }
+      
+      return Response.json({ files });
+    }
+    
+    return new Response('Unsupported content type', { status: 400 });
+  }
+};
+```
+
+### 流式响应
+
+```typescript
+export default {
+  async fetch(): Promise<Response> {
+    // 创建可读流
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        
+        // 逐步发送数据
+        for (let i = 0; i < 10; i++) {
+          const chunk = encoder.encode(`数据块 ${i}\n`);
+          controller.enqueue(chunk);
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        controller.close();
+      }
+    });
+    
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked'
+      }
+    });
+  }
+};
+```
+
+## 中间件模式
+
+### TypeScript 中间件实现
+
+```typescript
+type Handler = (request: Request, env: Env) => Promise<Response>;
+type Middleware = (handler: Handler) => Handler;
+
+interface Env {
+  API_KEY: string;
+}
+
+// 日志中间件
+const logger: Middleware = (handler) => {
+  return async (request, env) => {
+    const start = Date.now();
+    console.log(`→ ${request.method} ${request.url}`);
+    
+    const response = await handler(request, env);
+    
+    const duration = Date.now() - start;
+    console.log(`← ${response.status} (${duration}ms)`);
+    
+    return response;
+  };
+};
+
+// 认证中间件
+const auth: Middleware = (handler) => {
+  return async (request, env) => {
+    const apiKey = request.headers.get('X-API-Key');
+    
+    if (!apiKey || apiKey !== env.API_KEY) {
+      return Response.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    return handler(request, env);
+  };
+};
+
+// CORS 中间件
+const cors: Middleware = (handler) => {
+  return async (request, env) => {
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
+        }
+      });
+    }
+    
+    const response = await handler(request, env);
+    
+    // 添加 CORS 头
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set('Access-Control-Allow-Origin', '*');
+    
+    return newResponse;
+  };
+};
+
+// 组合中间件
+const compose = (...middlewares: Middleware[]): Middleware => {
+  return (handler) => {
+    return middlewares.reduceRight(
+      (next, middleware) => middleware(next),
+      handler
+    );
+  };
+};
+
+// 业务处理函数
+const handleRequest: Handler = async (request, env) => {
+  return Response.json({
+    message: 'Hello from protected endpoint',
+    timestamp: new Date().toISOString()
+  });
+};
+
+// 应用中间件
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const handler = compose(logger, cors, auth)(handleRequest);
+    return handler(request, env);
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 路由系统
+
+### 完整的 TypeScript 路由器
+
+```typescript
+type RouteHandler = (
+  request: Request,
+  params: Record<string, string>,
+  env: Env
+) => Promise<Response>;
+
+interface Route {
+  method: string;
+  pattern: RegExp;
+  keys: string[];
+  handler: RouteHandler;
+}
+
+class Router {
+  private routes: Route[] = [];
+  
+  private pathToRegex(path: string): { pattern: RegExp; keys: string[] } {
+    const keys: string[] = [];
+    const pattern = path
+      .replace(/\/:([^\/]+)/g, (_, key) => {
+        keys.push(key);
+        return '/([^/]+)';
+      })
+      .replace(/\*/g, '.*');
+    
+    return { pattern: new RegExp(`^${pattern}$`), keys };
+  }
+  
+  add(method: string, path: string, handler: RouteHandler) {
+    const { pattern, keys } = this.pathToRegex(path);
+    this.routes.push({ method, pattern, keys, handler });
+  }
+  
+  get(path: string, handler: RouteHandler) {
+    this.add('GET', path, handler);
+  }
+  
+  post(path: string, handler: RouteHandler) {
+    this.add('POST', path, handler);
+  }
+  
+  put(path: string, handler: RouteHandler) {
+    this.add('PUT', path, handler);
+  }
+  
+  delete(path: string, handler: RouteHandler) {
+    this.add('DELETE', path, handler);
+  }
+  
+  async handle(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    
+    for (const route of this.routes) {
+      if (route.method !== request.method) continue;
+      
+      const match = path.match(route.pattern);
+      if (match) {
+        const params: Record<string, string> = {};
+        route.keys.forEach((key, i) => {
+          params[key] = match[i + 1];
+        });
+        
+        return route.handler(request, params, env);
+      }
+    }
+    
+    return Response.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+// 使用路由器
+interface Env {
+  MY_KV: KVNamespace;
+}
+
+const router = new Router();
+
+// 定义路由
+router.get('/', async (request, params, env) => {
+  return Response.json({ message: 'API Root' });
+});
+
+router.get('/users/:id', async (request, params, env) => {
+  const userId = params.id;
+  return Response.json({ userId, name: `User ${userId}` });
+});
+
+router.post('/users', async (request, params, env) => {
+  const body = await request.json();
+  // 保存到 KV
+  await env.MY_KV.put(`user:${Date.now()}`, JSON.stringify(body));
+  return Response.json({ success: true, data: body }, { status: 201 });
+});
+
+router.get('/posts/:postId/comments/:commentId', async (request, params, env) => {
+  return Response.json({
+    postId: params.postId,
+    commentId: params.commentId
+  });
+});
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    return router.handle(request, env);
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## Cron 触发器
+
+Workers 可以定期执行任务，无需接收 HTTP 请求。
+
+### 配置（wrangler.toml）
+
+```toml
+[triggers]
+crons = ["0 0 * * *"]  # 每天午夜执行
+```
+
+### TypeScript Cron Handler
+
+```typescript
+interface Env {
+  MY_KV: KVNamespace;
+  NOTIFICATION_URL: string;
+}
+
+export default {
+  // HTTP 请求处理
+  async fetch(request: Request, env: Env): Promise<Response> {
+    return Response.json({ message: 'Worker is running' });
+  },
+  
+  // 定时任务处理
+  async scheduled(
+    event: ScheduledEvent,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    console.log('Cron job started at:', new Date().toISOString());
+    
+    try {
+      // 执行清理任务
+      const keys = await env.MY_KV.list({ prefix: 'temp:' });
+      
+      for (const key of keys.keys) {
+        await env.MY_KV.delete(key.name);
+        console.log('Deleted key:', key.name);
+      }
+      
+      // 发送通知
+      await fetch(env.NOTIFICATION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Cleanup completed',
+          deletedCount: keys.keys.length,
+          timestamp: new Date().toISOString()
+        })
+      });
+      
+      console.log('Cron job completed successfully');
+    } catch (error) {
+      console.error('Cron job failed:', error);
+    }
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 环境变量和秘密
+
+### 本地开发（.dev.vars）
+
+```bash
+# .dev.vars - 不要提交到 git
+API_KEY=dev_secret_key_12345
+DATABASE_URL=https://dev.example.com/db
+DEBUG=true
+```
+
+### 生产环境
+
+```bash
+# 使用 wrangler 设置秘密
+wrangler secret put API_KEY
+# 然后输入秘密值
+
+# 或在 wrangler.toml 中设置非秘密变量
+[vars]
+ENVIRONMENT = "production"
+API_VERSION = "v1"
+```
+
+### TypeScript 中使用
+
+```typescript
+interface Env {
+  API_KEY: string;
+  DATABASE_URL: string;
+  DEBUG: string;
+  ENVIRONMENT: string;
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // 使用环境变量
+    const isDebug = env.DEBUG === 'true';
+    
+    if (isDebug) {
+      console.log('Debug mode enabled');
+      console.log('Environment:', env.ENVIRONMENT);
+    }
+    
+    // 使用 API key
+    const apiKey = env.API_KEY;
+    
+    return Response.json({ 
+      environment: env.ENVIRONMENT,
+      debug: isDebug 
+    });
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 性能优化
+
+### 1. 使用 Cache API
+
+```typescript
+export default {
+  async fetch(request: Request): Promise<Response> {
+    const cache = caches.default;
+    
+    // 尝试从缓存获取
+    let response = await cache.match(request);
+    
+    if (response) {
+      console.log('Cache hit');
+      return response;
+    }
+    
+    // 缓存未命中，获取新数据
+    response = await fetch('https://api.example.com/data');
+    
+    // 只缓存成功的响应
+    if (response.ok) {
+      // 克隆响应以便缓存
+      const responseToCache = response.clone();
+      
+      // 添加缓存控制头
+      const headers = new Headers(responseToCache.headers);
+      headers.set('Cache-Control', 'max-age=3600');
+      
+      const cachedResponse = new Response(responseToCache.body, {
+        status: responseToCache.status,
+        statusText: responseToCache.statusText,
+        headers
+      });
+      
+      // 异步存入缓存
+      await cache.put(request, cachedResponse);
+    }
+    
+    return response;
+  }
+};
+```
+
+### 2. 并行请求
+
+```typescript
+export default {
+  async fetch(request: Request): Promise<Response> {
+    // 并行发起多个请求
+    const [users, posts, comments] = await Promise.all([
+      fetch('https://api.example.com/users').then(r => r.json()),
+      fetch('https://api.example.com/posts').then(r => r.json()),
+      fetch('https://api.example.com/comments').then(r => r.json())
+    ]);
+    
+    return Response.json({ users, posts, comments });
+  }
+};
+```
+
+### 3. 使用 waitUntil 处理非关键任务
+
+```typescript
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const response = Response.json({ success: true });
+    
+    // 日志记录不阻塞响应
+    ctx.waitUntil(
+      (async () => {
+        await fetch('https://logging.example.com/log', {
+          method: 'POST',
+          body: JSON.stringify({
+            url: request.url,
+            timestamp: Date.now()
+          })
+        });
+      })()
+    );
+    
+    return response;
+  }
+};
+```
+
+## 错误处理最佳实践
+
+```typescript
+class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    message: string,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+async function handleRequest(request: Request, env: Env): Promise<Response> {
+  try {
+    const url = new URL(request.url);
+    
+    if (url.pathname === '/error') {
+      throw new ApiError(400, 'Invalid request', 'INVALID_REQUEST');
+    }
+    
+    // 正常处理...
+    return Response.json({ success: true });
+    
+  } catch (error) {
+    console.error('Request failed:', error);
+    
+    if (error instanceof ApiError) {
+      return Response.json({
+        error: {
+          message: error.message,
+          code: error.code,
+          statusCode: error.statusCode
+        }
+      }, { status: error.statusCode });
+    }
+    
+    // 未知错误
+    return Response.json({
+      error: {
+        message: 'Internal server error',
+        code: 'INTERNAL_ERROR'
+      }
+    }, { status: 500 });
+  }
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    return handleRequest(request, env);
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 总结
+
+Cloudflare Workers 的高级特性让你可以构建复杂的应用：
+- KV 存储：全球分布的键值存储
+- 中间件模式：代码复用和关注点分离
+- 路由系统：优雅的 API 设计
+- Cron 触发器：定时任务
+- 性能优化：缓存、并行、异步处理
+
+使用 TypeScript 可以获得更好的开发体验和代码质量。

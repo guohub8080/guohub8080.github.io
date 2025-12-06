@@ -1,0 +1,319 @@
+export const title = "标准构建器"
+
+# {title}
+
+TonicML 编译器采用标准化的阶段处理模式，所有阶段都遵循统一的构建器规范。
+
+## 编译流程概述
+
+TonicML 编译流程由 10 个阶段（Stage）组成，每个阶段按顺序执行：
+
+- S1: `TEXT_TO_BLOCKS` - 文本转块
+- S2: `BASIC_TOKEN_RECOGNITION` - 基础 Token 识别
+- S3: `SYNTAX_ERROR_FILTRATION` - 语法错误过滤
+- S4: `TOKEN_ENHANCEMENT` - Token 增强
+- S5: `STATE_ASSIGNMENT` - 状态赋予
+- S6: `STRUCTURE_BUILD` - 结构构建
+- S7: `NOTE_PARSE` - 音符解析
+- S8: `SCORE_VALIDATION` - 乐谱验证
+- S9: `CHORD_PHRASE` - 和弦短语
+- S10: `FINAL_BUILD` - 最终构建
+
+## 阶段结果
+
+每个阶段都返回统一的 `StageResult` 对象：
+
+```typescript
+interface StageResult<TResult> {
+    is_valid: boolean;              // 阶段是否成功
+    stage_id: number;               // 阶段编号（1-10）
+    stage_identifier: StageIdentifier;  // 阶段标识符
+    result: TResult;                // 阶段处理结果（泛型）
+    log: DebugMessage[];            // 调试日志数组
+    duration_ms: number;            // 阶段耗时（毫秒）
+}
+```
+
+## 标准构建器
+
+所有阶段都使用统一的 `buildStageResult` 函数构建结果：
+
+```typescript
+buildStageResult<TResult>({
+    stageId: 1,                    // 阶段ID
+    result: [...],                 // 处理结果
+    isValid: true,                 // 是否成功（默认true）
+    log: [...],                    // 日志数组（默认[]）
+    duration_ms: 0                 // 耗时（默认0）
+})
+```
+
+### 参数说明
+
+`BuildStageResultParams` 接口定义了构建器的参数：
+
+```typescript
+interface BuildStageResultParams<TResult> {
+    stageId: StageId;              // 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+    result: TResult;               // 必填：阶段结果
+    isValid?: boolean;             // 可选：默认 true
+    log?: DebugMessage[];          // 可选：默认 []
+    duration_ms?: number;          // 可选：默认 0
+}
+```
+
+## 标准日志
+
+所有阶段的日志都遵循统一的 `DebugMessage` 格式：
+
+```typescript
+interface DebugMessage {
+    type: LogType;                 // 日志类型
+    tag: string;                   // 标签（用于分类）
+    message: string;               // 日志消息
+    source?: DebugSource | null;   // 源码位置信息
+    extra_data?: Record<string, any>;  // 额外数据
+}
+```
+
+### 日志类型
+
+`LogType` 枚举定义了四种日志类型：
+
+```typescript
+enum LogType {
+    ERROR = 'ERROR',           // 错误
+    WARNING = 'WARNING',       // 警告
+    SUGGESTION = 'SUGGESTION', // 建议
+    INFO = 'INFO'             // 信息
+}
+```
+
+### 源码位置
+
+`DebugSource` 接口记录代码中的具体位置：
+
+```typescript
+interface DebugSource {
+    line?: number;         // 行号
+    column?: number;       // 列号
+    offset?: number;       // 字符偏移量
+    character?: string;    // 相关字符内容
+}
+```
+
+## 标准日志构建器
+
+所有阶段都使用统一的 `buildDebugMessage` 函数构建日志：
+
+```typescript
+buildDebugMessage({
+    type: LogType.ERROR,           // 日志类型
+    tag: 'STAGE_ERROR',            // 标签
+    message: '错误描述',            // 消息
+    source: {                      // 可选：源码位置
+        line: 1,
+        column: 5,
+        offset: 4
+    },
+    extra_data: {                  // 可选：额外数据
+        key: 'value'
+    }
+})
+```
+
+## 标准标签
+
+所有阶段使用固定的 Tag 常量：
+
+```typescript
+// 通用标签
+const STAGE_START = "STAGE_START";      // 阶段开始
+const STAGE_END = "STAGE_END";          // 阶段结束
+const STAGE_ERROR = "STAGE_ERROR";      // 阶段错误
+const STAGE_SUCCESS = "STAGE_SUCCESS";  // 阶段成功
+const STAGE_SKIP = "STAGE_SKIP";        // 阶段跳过
+const AUTO_PROCESS = "AUTO_PROCESS";    // 自动处理
+const NODE = "NODE";                    // 节点相关
+```
+
+### 使用示例
+
+```typescript
+// 阶段开始
+logs.push(buildDebugMessage({
+    type: LogType.INFO,
+    tag: STAGE_START,
+    message: `S1_TEXT_TO_BLOCKS 开始。`
+}));
+
+// 自动处理警告
+logs.push(buildDebugMessage({
+    type: LogType.WARNING,
+    tag: AUTO_PROCESS,
+    message: `已自动过滤掉3个多余的逗号。`
+}));
+
+// 阶段结束
+logs.push(buildDebugMessage({
+    type: LogType.INFO,
+    tag: STAGE_END,
+    message: `完成处理，得到${result.length}个结果`
+}));
+```
+
+## 标准阶段模板
+
+每个阶段的函数都遵循以下模板：
+
+```typescript
+const s1_main_fn = (rawText: string): StageResult<ResultType[]> => {
+    // 1. 初始化日志收集器
+    const logs: DebugMessage[] = [];
+
+    // 2. 记录阶段开始
+    logs.push(buildDebugMessage({
+        type: LogType.INFO,
+        tag: STAGE_START,
+        message: `S1_TEXT_TO_BLOCKS 开始。`
+    }));
+
+    // 3. 基本输入验证
+    if (输入无效) {
+        logs.push(buildDebugMessage({
+            type: LogType.ERROR,
+            tag: STAGE_ERROR,
+            message: `输入无效`
+        }));
+        return buildStageResult({
+            stageId: 1,
+            result: [],
+            isValid: false,
+            log: logs,
+            duration_ms: 0
+        });
+    }
+
+    // 4. 执行主要处理逻辑
+    const result = processData(input);
+    
+    // 5. 记录阶段结束
+    logs.push(buildDebugMessage({
+        type: LogType.INFO,
+        tag: STAGE_END,
+        message: `完成处理`
+    }));
+
+    // 6. 构建并返回结果
+    return buildStageResult({
+        stageId: 1,
+        result: result,
+        isValid: true,
+        log: logs,
+        duration_ms: 0
+    });
+};
+```
+
+## 时间统计包装器
+
+每个阶段都有时间统计包装器：
+
+```typescript
+const s1_main_fn_with_time = (rawText: string): StageResult<ResultType[]> => {
+    const startTime = performance.now();
+    
+    // 调用原始的主函数
+    const result = s1_main_fn(rawText);
+    
+    const endTime = performance.now();
+    const durationMs = endTime - startTime;
+
+    // 在结果中添加时间统计
+    return {
+        ...result,
+        duration_ms: durationMs
+    };
+};
+
+// 导出带时间统计的版本
+export default s1_main_fn_with_time;
+```
+
+## 阶段标识符
+
+每个阶段都有固定的 StageIdentifier 常量：
+
+```typescript
+// 常量定义
+export const TEXT_TO_BLOCKS = 'TEXT_TO_BLOCKS';
+export const BASIC_TOKEN_RECOGNITION = 'BASIC_TOKEN_RECOGNITION';
+export const SYNTAX_ERROR_FILTRATION = 'SYNTAX_ERROR_FILTRATION';
+export const TOKEN_ENHANCEMENT = 'TOKEN_ENHANCEMENT';
+export const STATE_ASSIGNMENT = 'STATE_ASSIGNMENT';
+export const STRUCTURE_BUILD = 'STRUCTURE_BUILD';
+export const NOTE_PARSE = 'NOTE_PARSE';
+export const SCORE_VALIDATION = 'SCORE_VALIDATION';
+export const CHORD_PHRASE = 'CHORD_PHRASE';
+export const FINAL_BUILD = 'FINAL_BUILD';
+
+// 阶段映射
+export default {
+    s1: TEXT_TO_BLOCKS,
+    s2: BASIC_TOKEN_RECOGNITION,
+    s3: SYNTAX_ERROR_FILTRATION,
+    s4: TOKEN_ENHANCEMENT,
+    s5: STATE_ASSIGNMENT,
+    s6: STRUCTURE_BUILD,
+    s7: NOTE_PARSE,
+    s8: SCORE_VALIDATION,
+    s9: CHORD_PHRASE,
+    s10: FINAL_BUILD
+};
+```
+
+## 编译器调用
+
+使用 `TonicMLCompiler` 类或工厂函数：
+
+```typescript
+// 方式1：工厂函数（推荐）
+const compiler = compile("1 2 3\n4");
+
+// 方式2：直接实例化
+const compiler = new TonicMLCompiler("1 2 3\n4").compile();
+
+// 获取结果
+const result = compiler.getResult();
+
+// 获取指定阶段结果
+const s1Result = compiler.getStageResult(1);
+
+// 获取错误和警告
+const errors = compiler.getErrors();
+const warnings = compiler.getWarnings();
+
+// 检查编译是否成功
+if (compiler.isValid()) {
+    console.log('编译成功');
+}
+
+// 获取统计信息
+const stats = compiler.getStats();
+```
+
+## 优势
+
+采用标准化的构建器模式（Builder Pattern）带来以下优势：
+
+- **一致性**：所有阶段的结构和行为完全一致
+- **可预测性**：输入输出格式固定，易于理解和调试
+- **可维护性**：修改某个阶段不影响其他阶段
+- **可扩展性**：添加新阶段只需遵循相同模式
+- **类型安全**：TypeScript 泛型确保类型正确
+- **统一日志**：所有阶段的日志格式一致，便于收集和分析
+- **性能监控**：每个阶段都有独立的时间统计
+
+## 下一步
+
+了解标准构建器后，可以深入学习各个具体阶段的实现细节。

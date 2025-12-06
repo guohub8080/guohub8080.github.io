@@ -1,0 +1,977 @@
+export const title = "网络接口说明"
+
+# {title}
+
+本文档介绍系统后端提供的主要网络接口及其使用方式。
+
+## 接口基础信息
+
+所有接口均基于 RESTful API 规范设计，使用 JSON 格式进行数据交互。
+
+**基础 URL**: 在"网络测试与登录"页面配置的 API 地址
+
+**认证方式**: Bearer Token（JWT）
+
+## 健康检查接口
+
+### `GET /healthy`
+
+检查后端服务是否正常运行。
+
+#### 请求参数
+
+无需参数。
+
+#### 请求示例
+
+```http
+GET /healthy
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "status": "healthy",
+  "message": "服务运行正常"
+}
+```
+
+#### 说明
+
+- 该接口无需认证，可直接访问
+- 用于监控服务健康状态
+- 在配置 API 地址时会自动调用此接口进行测试
+
+---
+
+## 用户登录接口
+
+### `POST /auth/login`
+
+用户登录接口，获取访问令牌。
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| username | string | 是 | 用户名 |
+| password | string | 是 | 密码 |
+
+#### 请求示例
+
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "username": "gzt",
+  "password": "your_password"
+}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "nickname": "管理员郭",
+  "expires_at": "2025-11-04T17:13:54+08:00"
+}
+```
+
+**失败响应 (401 Unauthorized)**
+
+```json
+{
+  "detail": "用户名或密码错误"
+}
+```
+
+#### 响应字段说明
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| access_token | string | JWT 访问令牌，用于后续请求的身份验证 |
+| token_type | string | 令牌类型，固定为 "bearer" |
+| nickname | string | 用户昵称 |
+| expires_at | string | 令牌过期时间（ISO 8601 格式） |
+
+#### 使用说明
+
+1. 登录成功后，系统会自动保存 `access_token` 到本地存储
+2. 后续所有需要认证的接口请求都会在 HTTP 请求头中自动携带该令牌：
+   ```
+   Authorization: Bearer {access_token}
+   ```
+3. 令牌有效期为 24 小时（1440 分钟）
+4. 令牌过期后需要重新登录
+5. 系统会在登录页面实时显示令牌剩余有效时间
+
+---
+
+## 接口认证
+
+除了 `/healthy` 和 `/auth/login` 接口外，其他所有接口都需要在请求头中携带有效的访问令牌：
+
+```http
+Authorization: Bearer {access_token}
+```
+
+系统已自动处理令牌的携带和刷新，无需手动设置。
+
+## 错误处理
+
+当接口调用失败时，系统会返回相应的 HTTP 状态码和错误信息：
+
+| 状态码 | 说明 |
+|--------|------|
+| 400 | 请求参数错误 |
+| 401 | 未授权或令牌无效/过期 |
+| 403 | 权限不足 |
+| 404 | 资源不存在 |
+| 422 | 数据验证失败 |
+| 500 | 服务器内部错误 |
+
+错误响应格式：
+
+```json
+{
+  "detail": "错误描述信息"
+}
+```
+
+---
+
+## Task 模块接口
+
+Task 模块包含两类任务管理接口：
+- **长任务（Long Tasks）**：用于管理长期项目和任务
+- **即时任务（Instant Tasks）**：用于记录即时任务和一次性事项，可挂载到长任务
+
+### 时间格式说明
+
+所有接口的时间字段均使用 **东八区（UTC+8）** 时间，并以 **ISO 8601 带时区** 格式返回：`YYYY-MM-DDTHH:mm:ssZ`
+
+示例：`2025-11-04T14:30:00+08:00`
+
+---
+
+## 长任务接口（Long Tasks）
+
+### `GET /task/long`
+
+获取长任务列表。
+
+#### 查询参数
+
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| status | string | 否 | - | 任务状态（多个用逗号分隔）：`active`, `paused`, `done`, `dropped`, `archived` |
+| is_star | boolean | 否 | - | 是否仅查询标星任务 |
+| is_deleted | boolean | 否 | false | 是否包含已删除任务 |
+| overdue | boolean | 否 | - | 是否仅查询逾期任务 |
+| tags | string | 否 | - | 标签过滤（多个用逗号分隔） |
+| page | integer | 否 | 1 | 页码 |
+| limit | integer | 否 | 20 | 每页数量 |
+
+#### 请求示例
+
+```http
+GET /task/long?status=active,paused&is_star=true&page=1&limit=10
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "total": 25,
+  "page": 1,
+  "limit": 10,
+  "data": [
+    {
+      "id": 1,
+      "title": "开发用户管理模块",
+      "description": "实现用户的增删改查、权限管理等功能",
+      "stamp": "2025-11-01T09:00:00+08:00",
+      "start_time": "2025-11-01T09:00:00+08:00",
+      "ddl": "2025-11-15T18:00:00+08:00",
+      "finished_time": "9999-12-01T00:00:00+08:00",
+      "status": "active",
+      "is_star": true,
+      "is_deleted": false,
+      "tags": "backend,dev,urgent",
+      "contact": "张三",
+      "remark": "需要在 Sprint 3 完成"
+    }
+  ]
+}
+```
+
+---
+
+### `GET /task/long/{task_id}`
+
+获取指定长任务详情。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 长任务 ID |
+
+#### 请求示例
+
+```http
+GET /task/long/1
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "id": 1,
+  "title": "开发用户管理模块",
+  "description": "实现用户的增删改查、权限管理等功能",
+  "stamp": "2025-11-01T09:00:00+08:00",
+  "start_time": "2025-11-01T09:00:00+08:00",
+  "ddl": "2025-11-15T18:00:00+08:00",
+  "finished_time": "9999-12-01T00:00:00+08:00",
+  "status": "active",
+  "is_star": true,
+  "is_deleted": false,
+  "tags": "backend,dev,urgent",
+  "contact": "张三",
+  "remark": "需要在 Sprint 3 完成"
+}
+```
+
+**失败响应 (404 Not Found)**
+
+```json
+{
+  "detail": "长任务不存在"
+}
+```
+
+---
+
+### `POST /task/long`
+
+创建新的长任务。
+
+#### 请求体
+
+| 字段名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| title | string | 是 | - | 任务标题（最长500字符） |
+| description | string | 否 | null | 任务描述 |
+| start_time | string | 是 | - | 开始时间（格式：`YYYY-MM-DDTHH:mm:ssZ`） |
+| ddl | string | 否 | `9999-12-01T00:00:00+08:00` | 截止时间 |
+| status | string | 否 | `active` | 任务状态 |
+| is_star | boolean | 否 | false | 是否标星 |
+| tags | string | 否 | null | 标签（英文逗号分隔） |
+| contact | string | 否 | null | 联系人 |
+| remark | string | 否 | null | 备注 |
+
+#### 请求示例
+
+```http
+POST /task/long
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "title": "开发用户管理模块",
+  "description": "实现用户的增删改查、权限管理等功能",
+  "start_time": "2025-11-01T09:00:00+08:00",
+  "ddl": "2025-11-15T18:00:00+08:00",
+  "status": "active",
+  "is_star": true,
+  "tags": "backend,dev,urgent",
+  "contact": "张三",
+  "remark": "需要在 Sprint 3 完成"
+}
+```
+
+#### 响应示例
+
+**成功响应 (201 Created)**
+
+```json
+{
+  "id": 1,
+  "title": "开发用户管理模块",
+  "description": "实现用户的增删改查、权限管理等功能",
+  "stamp": "2025-11-01T09:00:00+08:00",
+  "start_time": "2025-11-01T09:00:00+08:00",
+  "ddl": "2025-11-15T18:00:00+08:00",
+  "finished_time": "9999-12-01T00:00:00+08:00",
+  "status": "active",
+  "is_star": true,
+  "is_deleted": false,
+  "tags": "backend,dev,urgent",
+  "contact": "张三",
+  "remark": "需要在 Sprint 3 完成"
+}
+```
+
+**失败响应 (422 Unprocessable Entity)**
+
+```json
+{
+  "detail": "标题不能为空"
+}
+```
+
+---
+
+### `PUT /task/long/{task_id}`
+
+更新长任务（完整更新）。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 长任务 ID |
+
+#### 请求体
+
+与创建接口相同，所有字段都需要提供。
+
+#### 请求示例
+
+```http
+PUT /task/long/1
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "title": "开发用户管理模块（已完成）",
+  "description": "实现用户的增删改查、权限管理等功能",
+  "start_time": "2025-11-01T09:00:00+08:00",
+  "ddl": "2025-11-15T18:00:00+08:00",
+  "status": "done",
+  "is_star": true,
+  "tags": "backend,dev,urgent,completed",
+  "contact": "张三",
+  "remark": "已完成并部署"
+}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "id": 1,
+  "title": "开发用户管理模块（已完成）",
+  "description": "实现用户的增删改查、权限管理等功能",
+  "stamp": "2025-11-01T09:00:00+08:00",
+  "start_time": "2025-11-01T09:00:00+08:00",
+  "ddl": "2025-11-15T18:00:00+08:00",
+  "finished_time": "2025-11-14T16:30:00+08:00",
+  "status": "done",
+  "is_star": true,
+  "is_deleted": false,
+  "tags": "backend,dev,urgent,completed",
+  "contact": "张三",
+  "remark": "已完成并部署"
+}
+```
+
+#### 说明
+
+- 当 `status` 变更为 `done` 或 `dropped` 时，如果 `finished_time` 为默认值，后端会自动设置为当前时间
+- `stamp` 字段由后端维护，前端传值将被忽略
+
+---
+
+### `PATCH /task/long/{task_id}`
+
+更新长任务（部分更新）。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 长任务 ID |
+
+#### 请求体
+
+只需提供要更新的字段。
+
+#### 请求示例
+
+```http
+PATCH /task/long/1
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "status": "done"
+}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "id": 1,
+  "title": "开发用户管理模块",
+  "description": "实现用户的增删改查、权限管理等功能",
+  "stamp": "2025-11-01T09:00:00+08:00",
+  "start_time": "2025-11-01T09:00:00+08:00",
+  "ddl": "2025-11-15T18:00:00+08:00",
+  "finished_time": "2025-11-14T16:30:00+08:00",
+  "status": "done",
+  "is_star": true,
+  "is_deleted": false,
+  "tags": "backend,dev,urgent",
+  "contact": "张三",
+  "remark": "需要在 Sprint 3 完成"
+}
+```
+
+---
+
+### `DELETE /task/long/{task_id}`
+
+删除长任务（逻辑删除）。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 长任务 ID |
+
+#### 请求示例
+
+```http
+DELETE /task/long/1
+Authorization: Bearer {access_token}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "message": "长任务已删除",
+  "id": 1
+}
+```
+
+#### 说明
+
+- 该操作为逻辑删除，将 `is_deleted` 字段设置为 `true`
+- 逻辑删除后的任务默认不会在列表中显示，除非明确指定 `is_deleted=true` 参数
+
+---
+
+### `GET /task/long/{task_id}/duration`
+
+统计长任务的总投入时间。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 长任务 ID |
+
+#### 请求示例
+
+```http
+GET /task/long/1/duration
+Authorization: Bearer {access_token}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "task_id": 1,
+  "total_minutes": 360,
+  "total_hours": 6.0,
+  "instant_task_count": 5,
+  "breakdown": [
+    {
+      "instant_task_id": 102,
+      "title": "完成用户注册接口",
+      "minutes": 180
+    },
+    {
+      "instant_task_id": 103,
+      "title": "完成用户登录接口",
+      "minutes": 120
+    },
+    {
+      "instant_task_id": 104,
+      "title": "完成权限管理接口",
+      "minutes": 60
+    }
+  ]
+}
+```
+
+#### 说明
+
+- 统计通过挂载的即时任务（`long_task_id` 等于指定长任务 ID）的 `start_time` 和 `end_time` 计算
+- 仅统计未逻辑删除的即时任务（`is_deleted=false`）
+
+---
+
+## 即时任务接口（Instant Tasks）
+
+### `GET /task/instant`
+
+获取即时任务列表。
+
+#### 查询参数
+
+| 参数名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| long_task_id | integer | 否 | - | 关联的长任务 ID（0表示独立任务） |
+| is_star | boolean | 否 | - | 是否仅查询标星任务 |
+| is_deleted | boolean | 否 | false | 是否包含已删除任务 |
+| tags | string | 否 | - | 标签过滤（多个用逗号分隔） |
+| start_date | string | 否 | - | 起始日期（格式：`YYYY-MM-DD`） |
+| end_date | string | 否 | - | 结束日期（格式：`YYYY-MM-DD`） |
+| page | integer | 否 | 1 | 页码 |
+| limit | integer | 否 | 20 | 每页数量 |
+
+#### 请求示例
+
+```http
+GET /task/instant?long_task_id=1&is_deleted=false&page=1&limit=10
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "total": 15,
+  "page": 1,
+  "limit": 10,
+  "data": [
+    {
+      "id": 102,
+      "long_task_id": 1,
+      "title": "完成用户注册接口",
+      "content": "实现注册接口，包括邮箱验证",
+      "stamp": "2025-11-03T14:00:00+08:00",
+      "start_time": "2025-11-03T14:00:00+08:00",
+      "end_time": "2025-11-03T17:00:00+08:00",
+      "is_star": false,
+      "is_deleted": false,
+      "tags": "backend,api",
+      "contact": null,
+      "remark": "已提交代码审查"
+    }
+  ]
+}
+```
+
+---
+
+### `GET /task/instant/{task_id}`
+
+获取指定即时任务详情。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 即时任务 ID |
+
+#### 请求示例
+
+```http
+GET /task/instant/102
+Authorization: Bearer {access_token}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "id": 102,
+  "long_task_id": 1,
+  "title": "完成用户注册接口",
+  "content": "实现注册接口，包括邮箱验证",
+  "stamp": "2025-11-03T14:00:00+08:00",
+  "start_time": "2025-11-03T14:00:00+08:00",
+  "end_time": "2025-11-03T17:00:00+08:00",
+  "is_star": false,
+  "is_deleted": false,
+  "tags": "backend,api",
+  "contact": null,
+  "remark": "已提交代码审查"
+}
+```
+
+---
+
+### `POST /task/instant`
+
+创建新的即时任务。
+
+#### 请求体
+
+| 字段名 | 类型 | 必填 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| title | string | 是 | - | 任务标题（最长500字符） |
+| content | string | 否 | null | 任务内容/详情 |
+| stamp | string | 是 | - | 发生/归属时间（格式：`YYYY-MM-DDTHH:mm:ssZ`） |
+| start_time | string | 是 | - | 开始时间 |
+| end_time | string | 是 | - | 结束时间 |
+| long_task_id | integer | 否 | 0 | 关联的长任务 ID（0表示独立任务） |
+| is_star | boolean | 否 | false | 是否标星 |
+| tags | string | 否 | null | 标签（英文逗号分隔） |
+| contact | string | 否 | null | 联系人 |
+| remark | string | 否 | null | 备注 |
+
+#### 请求示例（独立任务）
+
+```http
+POST /task/instant
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "long_task_id": 0,
+  "title": "临时会议",
+  "content": "讨论项目进度",
+  "stamp": "2025-11-04T14:30:00+08:00",
+  "start_time": "2025-11-04T14:30:00+08:00",
+  "end_time": "2025-11-04T15:30:00+08:00",
+  "tags": "meeting,urgent"
+}
+```
+
+#### 请求示例（挂载到长任务）
+
+```http
+POST /task/instant
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "long_task_id": 1,
+  "title": "完成用户注册接口",
+  "content": "实现注册接口，包括邮箱验证",
+  "stamp": "2025-11-03T14:00:00+08:00",
+  "start_time": "2025-11-03T14:00:00+08:00",
+  "end_time": "2025-11-03T17:00:00+08:00",
+  "tags": "backend,api",
+  "remark": "已提交代码审查"
+}
+```
+
+#### 响应示例
+
+**成功响应 (201 Created)**
+
+```json
+{
+  "id": 102,
+  "long_task_id": 1,
+  "title": "完成用户注册接口",
+  "content": "实现注册接口，包括邮箱验证",
+  "stamp": "2025-11-03T14:00:00+08:00",
+  "start_time": "2025-11-03T14:00:00+08:00",
+  "end_time": "2025-11-03T17:00:00+08:00",
+  "is_star": false,
+  "is_deleted": false,
+  "tags": "backend,api",
+  "contact": null,
+  "remark": "已提交代码审查"
+}
+```
+
+**失败响应 (422 Unprocessable Entity)**
+
+```json
+{
+  "detail": "stamp 字段格式错误，应为 YYYY-MM-DDTHH:mm:ssZ"
+}
+```
+
+**失败响应 (404 Not Found)**
+
+```json
+{
+  "detail": "关联的长任务不存在"
+}
+```
+
+#### 说明
+
+- `stamp` 字段必填，由前端提供
+- 如果 `long_task_id != 0`，后端会校验该长任务是否存在且未逻辑删除
+- `start_time` 和 `end_time` 用于计算时长统计
+
+---
+
+### `PUT /task/instant/{task_id}`
+
+更新即时任务（完整更新）。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 即时任务 ID |
+
+#### 请求体
+
+与创建接口相同，所有字段都需要提供。
+
+#### 请求示例
+
+```http
+PUT /task/instant/102
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "long_task_id": 1,
+  "title": "完成用户注册接口（已测试）",
+  "content": "实现注册接口，包括邮箱验证，已完成单元测试",
+  "stamp": "2025-11-03T14:00:00+08:00",
+  "start_time": "2025-11-03T14:00:00+08:00",
+  "end_time": "2025-11-03T17:30:00+08:00",
+  "is_star": true,
+  "tags": "backend,api,tested",
+  "contact": null,
+  "remark": "已提交代码审查并通过"
+}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "id": 102,
+  "long_task_id": 1,
+  "title": "完成用户注册接口（已测试）",
+  "content": "实现注册接口，包括邮箱验证，已完成单元测试",
+  "stamp": "2025-11-03T14:00:00+08:00",
+  "start_time": "2025-11-03T14:00:00+08:00",
+  "end_time": "2025-11-03T17:30:00+08:00",
+  "is_star": true,
+  "is_deleted": false,
+  "tags": "backend,api,tested",
+  "contact": null,
+  "remark": "已提交代码审查并通过"
+}
+```
+
+---
+
+### `PATCH /task/instant/{task_id}`
+
+更新即时任务（部分更新）。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 即时任务 ID |
+
+#### 请求体
+
+只需提供要更新的字段。
+
+#### 请求示例
+
+```http
+PATCH /task/instant/102
+Content-Type: application/json
+Authorization: Bearer {access_token}
+
+{
+  "is_star": true,
+  "remark": "已提交代码审查并通过"
+}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "id": 102,
+  "long_task_id": 1,
+  "title": "完成用户注册接口",
+  "content": "实现注册接口，包括邮箱验证",
+  "stamp": "2025-11-03T14:00:00+08:00",
+  "start_time": "2025-11-03T14:00:00+08:00",
+  "end_time": "2025-11-03T17:00:00+08:00",
+  "is_star": true,
+  "is_deleted": false,
+  "tags": "backend,api",
+  "contact": null,
+  "remark": "已提交代码审查并通过"
+}
+```
+
+---
+
+### `DELETE /task/instant/{task_id}`
+
+删除即时任务（逻辑删除）。
+
+#### 路径参数
+
+| 参数名 | 类型 | 说明 |
+|--------|------|------|
+| task_id | integer | 即时任务 ID |
+
+#### 请求示例
+
+```http
+DELETE /task/instant/102
+Authorization: Bearer {access_token}
+```
+
+#### 响应示例
+
+**成功响应 (200 OK)**
+
+```json
+{
+  "message": "即时任务已删除",
+  "id": 102
+}
+```
+
+#### 说明
+
+- 该操作为逻辑删除，将 `is_deleted` 字段设置为 `true`
+- 逻辑删除后的任务默认不会在列表中显示，除非明确指定 `is_deleted=true` 参数
+
+---
+
+## 使用示例
+
+### 创建长任务并添加即时记录
+
+```typescript
+import { apiPost } from '@api/client';
+
+// 1. 创建长任务
+const longTask = await apiPost('/task/long', {
+  title: '开发用户管理模块',
+  description: '实现用户的增删改查、权限管理等功能',
+  start_time: '2025-11-01T09:00:00+08:00',
+  ddl: '2025-11-15T18:00:00+08:00',
+  tags: 'backend,dev,urgent',
+  contact: '张三'
+});
+
+// 2. 为该长任务添加即时记录
+const instantTask = await apiPost('/task/instant', {
+  long_task_id: longTask.id,
+  title: '完成用户注册接口',
+  content: '实现注册接口，包括邮箱验证',
+  stamp: '2025-11-03T14:00:00+08:00',
+  start_time: '2025-11-03T14:00:00+08:00',
+  end_time: '2025-11-03T17:00:00+08:00',
+  tags: 'backend,api'
+});
+```
+
+### 查询逾期任务
+
+```typescript
+import { apiGet } from '@api/client';
+
+// 查询逾期且未完成的长任务
+const overdueTasks = await apiGet('/task/long', {
+  params: {
+    overdue: true,
+    status: 'active,paused'
+  }
+});
+```
+
+### 完成任务并查看统计
+
+```typescript
+import { apiPatch, apiGet } from '@api/client';
+
+// 1. 标记任务为已完成
+await apiPatch('/task/long/1', {
+  status: 'done'
+});
+
+// 2. 查看任务总投入时间
+const duration = await apiGet('/task/long/1/duration');
+console.log(`总投入时间: ${duration.total_hours} 小时`);
+```
+
+---
+
+## 数据模型说明
+
+### 长任务状态枚举
+
+| 值 | 说明 |
+|----|------|
+| `active` | 进行中（默认） |
+| `paused` | 已暂停 |
+| `done` | 已完成 |
+| `dropped` | 已放弃 |
+| `archived` | 已归档 |
+
+### 时间字段说明
+
+#### 长任务（Long Tasks）
+
+- **stamp**: 长任务创建时间（后端自动生成，前端忽略）
+- **start_time**: 业务上的开始时间（必填）
+- **ddl**: 截止时间（默认为 `9999-12-01T00:00:00+08:00` 表示无截止）
+- **finished_time**: 完成时间（状态变为 `done` 或 `dropped` 时自动设置）
+
+#### 即时任务（Instant Tasks）
+
+- **stamp**: 发生/归属时间（前端必填）
+- **start_time**: 开始时间（必填）
+- **end_time**: 结束时间（必填）
+
+### 逾期判定规则
+
+- **未结束任务**：当前时间 > `ddl` 且 `status` 不为 `done` 或 `dropped`
+- **已结束任务**：`finished_time` > `ddl`
+
+### 标签格式
+
+标签字段使用英文逗号分隔的字符串：
+- 单个标签：`"work"`
+- 多个标签：`"work,urgent,backend"`
+- 无标签：`""` 或 `null`
+

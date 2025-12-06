@@ -1,0 +1,153 @@
+export const title = "React Hooks 入门";
+
+# {title}
+
+React Hooks 是 React 16.8 引入的新特性，它让你在不编写 class 的情况下使用 state 以及其他的 React 特性。
+
+## 什么是 Hooks？
+
+Hooks 是一些可以让你在函数组件里"钩入" React state 及生命周期等特性的函数。Hooks 不能在 class 组件中使用，它让你不使用 class 也能使用 React 的特性。
+
+在 React 16.8 之前，函数组件被称为"无状态组件"。现在有了 Hooks，函数组件也可以拥有内部状态和副作用处理能力，这使得函数组件能够完全替代 class 组件。
+
+## useState
+
+`useState` 是最常用的 Hook，用于在函数组件中添加状态管理能力。
+
+### 基本用法
+
+```javascript
+import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div>
+      <p>你点击了 {count} 次</p>
+      <button onClick={() => setCount(count + 1)}>
+        点击我
+      </button>
+    </div>
+  );
+}
+```
+
+### 语法说明
+
+- `useState` 接受初始值作为参数
+- 返回一个数组，包含当前状态值和更新状态的函数
+- 使用数组解构来获取状态值和更新函数
+
+## useEffect
+
+`useEffect` 用于处理副作用，比如数据获取、订阅或手动修改 DOM。
+
+### 基本用法
+
+```javascript
+import { useEffect, useState } from 'react';
+
+function Example() {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    // 副作用代码
+    document.title = `你点击了 ${count} 次`;
+    
+    // 可选的清理函数
+    return () => {
+      // 清理代码
+      console.log('组件卸载或 count 改变前执行');
+    };
+  }, [count]); // 依赖项数组
+  
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      点击 {count} 次
+    </button>
+  );
+}
+```
+
+### 依赖项数组
+
+- 空数组 `[]`：只在组件挂载时执行一次
+- 有依赖 `[count]`：在依赖项改变时执行
+- 无依赖项：每次渲染后都执行（不推荐）
+
+## 其他常用 Hooks
+
+### useContext
+
+用于访问 React Context，避免多层组件传递 props。
+
+```javascript
+const theme = useContext(ThemeContext);
+```
+
+### useReducer
+
+类似 `useState`，但更适合管理复杂的状态逻辑。
+
+```javascript
+const [state, dispatch] = useReducer(reducer, initialState);
+```
+
+### useCallback
+
+返回一个记忆化的回调函数，避免不必要的重新渲染。
+
+```javascript
+const memoizedCallback = useCallback(
+  () => {
+    doSomething(a, b);
+  },
+  [a, b],
+);
+```
+
+### useMemo
+
+返回一个记忆化的值，用于优化昂贵的计算。
+
+```javascript
+const memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);
+```
+
+## Hooks 使用规则
+
+1. 只在最顶层使用 Hook：不要在循环、条件或嵌套函数中调用 Hook
+2. 只在 React 函数中调用 Hook：在 React 函数组件或自定义 Hook 中调用
+
+## 自定义 Hooks
+
+你可以创建自定义 Hook 来复用组件逻辑：
+
+```javascript
+function useWindowSize() {
+  const [size, setSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  return size;
+}
+```
+
+---
+
+*使用 Hooks 可以让你的代码更简洁、更易于理解和测试。*
+

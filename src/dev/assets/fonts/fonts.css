@@ -1,0 +1,56 @@
+/* NodeScript 自动切割字体 */
+@import url('@assets/fonts/nodeScript/minsans/dist/result.css');
+@import url('@assets/fonts/nodeScript/syht-cn/dist/result.css');
+@import url('@assets/fonts/nodeScript/syht-jp/dist/result.css');
+@import url('@assets/fonts/nodeScript/syst-cn/dist/result.css');
+@import url('@assets/fonts/nodeScript/syst-jp/dist/result.css');
+
+/* JetBrains Mono 字体 - 代码字体 */
+@font-face {
+  font-family: 'jb-mono';
+  src: url('./jb-mono/jb-mono.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'jb-mono';
+  src: url('./jb-mono/jb-mono-i.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Consolas 字体 - 代码字体 */
+@font-face {
+  font-family: 'consolas';
+  src: url('./consolas/consolas.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'consolas';
+  src: url('./consolas/consolas-b.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'consolas';
+  src: url('./consolas/consolas-i.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'consolas';
+  src: url('./consolas/consolas-bi.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}

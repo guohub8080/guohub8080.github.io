@@ -1,0 +1,18 @@
+/**
+ * Aurora Background 动画定义
+ * 此文件通过 global.css 引入，以便 Tailwind 能识别自定义动画类
+ */
+@theme inline {
+  --animate-aurora: aurora 60s linear infinite;
+  
+  @keyframes aurora {
+    from {
+      background-position: 50% 50%, 50% 50%;
+    }
+    to {
+      background-position: 350% 50%, 350% 50%;
+    }
+  }
+}
+
+

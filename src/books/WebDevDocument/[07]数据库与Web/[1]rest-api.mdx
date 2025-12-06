@@ -1,0 +1,420 @@
+export const title = "RESTful API 设计";
+
+# {title}
+
+RESTful API 是一种基于 HTTP 协议的 API 设计风格，它使用标准的 HTTP 方法来操作资源，是现代 Web 应用最常用的接口设计方式。
+
+## 什么是 REST？
+
+REST（Representational State Transfer，表述性状态转移）是一种软件架构风格，用于设计网络应用程序。RESTful API 遵循 REST 架构原则，通过 URL 定位资源，通过 HTTP 动词描述操作。
+
+### REST 的核心原则
+
+1. 资源（Resources）：万物皆资源，每个资源都有唯一的标识符（URI）
+2. 表现层（Representation）：资源的具体表现形式（JSON、XML 等）
+3. 状态转移（State Transfer）：通过 HTTP 方法改变资源状态
+4. 无状态（Stateless）：每个请求都包含所需的所有信息
+
+## HTTP 方法
+
+RESTful API 使用标准的 HTTP 方法来表示不同的操作：
+
+### GET - 获取资源
+
+```http
+# 获取所有用户
+GET /api/users
+
+# 获取单个用户
+GET /api/users/123
+
+# 带查询参数
+GET /api/users?page=1&limit=10
+```
+
+### POST - 创建资源
+
+```http
+POST /api/users
+Content-Type: application/json
+
+{
+  "name": "张三",
+  "email": "zhangsan@example.com"
+}
+```
+
+### PUT - 完整更新资源
+
+```http
+PUT /api/users/123
+Content-Type: application/json
+
+{
+  "name": "张三",
+  "email": "zhangsan@example.com",
+  "phone": "13800138000"
+}
+```
+
+### PATCH - 部分更新资源
+
+```http
+PATCH /api/users/123
+Content-Type: application/json
+
+{
+  "phone": "13800138000"
+}
+```
+
+### DELETE - 删除资源
+
+```http
+DELETE /api/users/123
+```
+
+## URL 设计规范
+
+### 使用名词而非动词
+
+❌ 不好的设计：
+```
+GET /getUsers
+POST /createUser
+DELETE /deleteUser/123
+```
+
+✅ 好的设计：
+```
+GET /users
+POST /users
+DELETE /users/123
+```
+
+### 使用复数形式
+
+```
+GET /users          # 获取用户列表
+GET /users/123      # 获取单个用户
+GET /users/123/posts # 获取用户的文章
+```
+
+### 资源嵌套
+
+对于有从属关系的资源，可以使用嵌套结构：
+
+```
+GET /users/123/posts           # 获取用户123的所有文章
+GET /users/123/posts/456       # 获取用户123的文章456
+POST /users/123/posts          # 为用户123创建新文章
+```
+
+注意：嵌套层级不要超过 2 层，过深的嵌套会使 URL 难以理解和维护。
+
+### 使用查询参数进行过滤和排序
+
+```
+GET /users?status=active                    # 筛选
+GET /users?sort=created_at&order=desc       # 排序
+GET /users?page=1&limit=20                  # 分页
+GET /users?fields=id,name,email             # 字段过滤
+```
+
+## HTTP 状态码
+
+正确使用 HTTP 状态码能够清晰地表达请求的结果：
+
+### 2xx 成功
+
+- 200 OK：请求成功（GET、PUT、PATCH）
+- 201 Created：资源创建成功（POST）
+- 204 No Content：请求成功但无返回内容（DELETE）
+
+### 4xx 客户端错误
+
+- 400 Bad Request：请求参数错误
+- 401 Unauthorized：未认证
+- 403 Forbidden：无权限
+- 404 Not Found：资源不存在
+- 409 Conflict：资源冲突（如重复创建）
+- 422 Unprocessable Entity：请求格式正确但语义错误
+
+### 5xx 服务器错误
+
+- 500 Internal Server Error：服务器内部错误
+- 502 Bad Gateway：网关错误
+- 503 Service Unavailable：服务不可用
+
+## 响应格式设计
+
+### 统一的响应结构
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 123,
+    "name": "张三",
+    "email": "zhangsan@example.com"
+  },
+  "message": "操作成功"
+}
+```
+
+### 错误响应
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "邮箱格式不正确",
+    "details": [
+      {
+        "field": "email",
+        "message": "必须是有效的邮箱地址"
+      }
+    ]
+  }
+}
+```
+
+### 分页响应
+
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "用户1" },
+    { "id": 2, "name": "用户2" }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "totalPages": 5
+  }
+}
+```
+
+## 版本控制
+
+API 需要支持版本控制，以便在不影响现有客户端的情况下进行升级：
+
+### URL 路径版本
+
+```
+GET /api/v1/users
+GET /api/v2/users
+```
+
+### 请求头版本
+
+```http
+GET /api/users
+Accept: application/vnd.myapi.v1+json
+```
+
+### 自定义请求头
+
+```http
+GET /api/users
+API-Version: 1
+```
+
+## 认证与授权
+
+### Bearer Token
+
+```http
+GET /api/users
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### API Key
+
+```http
+GET /api/users
+X-API-Key: your-api-key-here
+```
+
+### OAuth 2.0
+
+```http
+GET /api/users
+Authorization: Bearer oauth2-access-token
+```
+
+## 最佳实践示例
+
+### Node.js + Express
+
+```javascript
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+// 获取所有用户
+app.get('/api/users', async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const users = await User.find()
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+    
+    res.json({
+      success: true,
+      data: users,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: await User.countDocuments()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '服务器错误'
+      }
+    });
+  }
+});
+
+// 创建用户
+app.post('/api/users', async (req, res) => {
+  try {
+    const user = await User.create(req.body);
+    res.status(201).json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(422).json({
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.message
+        }
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '服务器错误'
+      }
+    });
+  }
+});
+
+// 更新用户
+app.put('/api/users/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '服务器错误'
+      }
+    });
+  }
+});
+
+// 删除用户
+app.delete('/api/users/:id', async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '用户不存在'
+        }
+      });
+    }
+    
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: {
+        message: '服务器错误'
+      }
+    });
+  }
+});
+```
+
+## CORS 跨域处理
+
+```javascript
+const cors = require('cors');
+
+app.use(cors({
+  origin: 'https://example.com',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+```
+
+## 限流（Rate Limiting）
+
+```javascript
+const rateLimit = require('express-rate-limit');
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分钟
+  max: 100, // 最多100个请求
+  message: '请求过于频繁，请稍后再试'
+});
+
+app.use('/api/', limiter);
+```
+
+## 文档化
+
+使用 Swagger/OpenAPI 自动生成 API 文档：
+
+```javascript
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+```
+
+## 常见错误
+
+1. 使用动词而非名词：`/getUser` 应该是 `/users`
+2. 不一致的命名：同时使用 `/users` 和 `/user`
+3. 过度嵌套：`/users/123/posts/456/comments/789` 太深了
+4. 忽略 HTTP 状态码：所有响应都返回 200
+5. 不支持分页：返回所有数据导致性能问题
+6. 缺少版本控制：无法向后兼容
+
+---
+
+*遵循 RESTful 设计原则可以让 API 更加直观、易用和可维护。*
+

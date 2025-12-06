@@ -1,0 +1,350 @@
+export const title = "Grid 网格布局";
+
+# {title}
+
+CSS Grid 是一个强大的二维布局系统，它可以同时在行和列上进行布局控制，是创建复杂网页布局的理想选择。
+
+## 什么是 Grid？
+
+CSS Grid 布局是一个二维的基于网格的布局系统，旨在完全改变我们设计基于网格的用户界面的方式。与 Flexbox（一维布局）不同，Grid 可以同时处理行和列。
+
+### Grid vs Flexbox
+
+- Flexbox：一维布局，适合组件内部或单行/单列布局
+- Grid：二维布局，适合整体页面布局或复杂的网格结构
+
+## 基本概念
+
+### Grid 容器和项目
+
+- Grid 容器（Grid Container）：设置了 `display: grid` 的元素
+- Grid 项目（Grid Items）：容器的直接子元素
+
+### 网格线（Grid Lines）
+
+网格线是构成网格结构的分界线，它们可以是垂直的（列网格线）或水平的（行网格线）。
+
+### 网格轨道（Grid Track）
+
+两条相邻网格线之间的空间，可以看作是网格的行或列。
+
+### 网格单元（Grid Cell）
+
+两条相邻的行网格线和两条相邻的列网格线之间的空间。
+
+### 网格区域（Grid Area）
+
+由四条网格线包围的总空间，可以包含一个或多个网格单元。
+
+## 容器属性
+
+### display
+
+```css
+.container {
+  display: grid; /* 或 inline-grid */
+}
+```
+
+### grid-template-columns / rows
+
+定义网格的列和行：
+
+```css
+.container {
+  /* 固定宽度 */
+  grid-template-columns: 100px 200px 100px;
+  
+  /* 使用 fr 单位（fraction，分数） */
+  grid-template-columns: 1fr 2fr 1fr;
+  
+  /* 使用 repeat() 函数 */
+  grid-template-columns: repeat(3, 1fr);
+  
+  /* 混合使用 */
+  grid-template-columns: 100px 1fr 2fr;
+  
+  /* 自动填充 */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+```
+
+### grid-template-areas
+
+通过命名网格区域来定义布局：
+
+```css
+.container {
+  grid-template-areas:
+    "header header header"
+    "sidebar main main"
+    "footer footer footer";
+}
+
+.header { grid-area: header; }
+.sidebar { grid-area: sidebar; }
+.main { grid-area: main; }
+.footer { grid-area: footer; }
+```
+
+### gap
+
+设置网格间距：
+
+```css
+.container {
+  gap: 20px; /* 行和列的间距 */
+  /* row-gap: 10px; */
+  /* column-gap: 20px; */
+}
+```
+
+### justify-items
+
+设置单元格内容的水平对齐方式：
+
+```css
+.container {
+  justify-items: stretch; /* 默认值，填满单元格 */
+  /* justify-items: start; */
+  /* justify-items: end; */
+  /* justify-items: center; */
+}
+```
+
+### align-items
+
+设置单元格内容的垂直对齐方式：
+
+```css
+.container {
+  align-items: stretch; /* 默认值 */
+  /* align-items: start; */
+  /* align-items: end; */
+  /* align-items: center; */
+}
+```
+
+### justify-content
+
+设置整个网格在容器中的水平对齐方式：
+
+```css
+.container {
+  justify-content: start; /* 默认值 */
+  /* justify-content: end; */
+  /* justify-content: center; */
+  /* justify-content: space-between; */
+  /* justify-content: space-around; */
+  /* justify-content: space-evenly; */
+}
+```
+
+### align-content
+
+设置整个网格在容器中的垂直对齐方式：
+
+```css
+.container {
+  align-content: start; /* 默认值 */
+  /* 其他值与 justify-content 相同 */
+}
+```
+
+### grid-auto-flow
+
+控制自动放置算法的工作方式：
+
+```css
+.container {
+  grid-auto-flow: row; /* 默认值，按行填充 */
+  /* grid-auto-flow: column; */ /* 按列填充 */
+  /* grid-auto-flow: dense; */ /* 尽可能填满空格 */
+}
+```
+
+### grid-auto-columns / rows
+
+定义隐式网格轨道的大小：
+
+```css
+.container {
+  grid-auto-columns: 100px;
+  grid-auto-rows: 50px;
+}
+```
+
+## 项目属性
+
+### grid-column / grid-row
+
+指定项目的位置和跨度：
+
+```css
+.item {
+  /* 从第 1 条网格线到第 3 条网格线 */
+  grid-column: 1 / 3;
+  
+  /* 跨越 2 列 */
+  grid-column: span 2;
+  
+  /* 简写 */
+  grid-column: 1 / span 2;
+  
+  /* 行的设置方式相同 */
+  grid-row: 1 / 3;
+}
+```
+
+### grid-area
+
+指定项目放在哪个区域，或作为 grid-column 和 grid-row 的简写：
+
+```css
+.item {
+  /* 使用命名区域 */
+  grid-area: header;
+  
+  /* 简写：row-start / column-start / row-end / column-end */
+  grid-area: 1 / 1 / 3 / 3;
+}
+```
+
+### justify-self / align-self
+
+设置单个项目的对齐方式：
+
+```css
+.item {
+  justify-self: start;
+  align-self: center;
+}
+```
+
+## 实用示例
+
+### 响应式卡片网格
+
+```css
+.container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+}
+```
+
+### 圣杯布局
+
+```css
+.container {
+  display: grid;
+  grid-template-areas:
+    "header header header"
+    "sidebar main aside"
+    "footer footer footer";
+  grid-template-columns: 200px 1fr 200px;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  gap: 10px;
+}
+```
+
+### 图片画廊
+
+```css
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-auto-rows: 200px;
+  gap: 10px;
+}
+
+.gallery-item:nth-child(3n) {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+```
+
+### 完美居中
+
+```css
+.container {
+  display: grid;
+  place-items: center; /* justify-items + align-items 的简写 */
+  height: 100vh;
+}
+```
+
+### 12 列网格系统
+
+```css
+.container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+
+.col-6 {
+  grid-column: span 6;
+}
+
+.col-4 {
+  grid-column: span 4;
+}
+```
+
+## 高级特性
+
+### minmax() 函数
+
+设置最小值和最大值：
+
+```css
+.container {
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+}
+```
+
+### auto-fill vs auto-fit
+
+```css
+/* auto-fill: 尽可能多地创建列，即使是空的 */
+grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+
+/* auto-fit: 创建列并立即折叠空列 */
+grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+```
+
+### 命名网格线
+
+```css
+.container {
+  grid-template-columns: [main-start] 1fr [content-start] 2fr [content-end] 1fr [main-end];
+}
+
+.item {
+  grid-column: content-start / content-end;
+}
+```
+
+## 最佳实践
+
+1. 使用 Grid 进行页面布局，Flexbox 用于组件
+2. 利用 `fr` 单位创建灵活的网格
+3. 使用 `minmax()` 创建响应式布局
+4. 使用命名区域提高可读性
+5. 结合媒体查询调整布局
+
+## Grid vs Flexbox 使用场景
+
+| 使用 Grid | 使用 Flexbox |
+|---------|------------|
+| 二维布局 | 一维布局 |
+| 整体页面布局 | 组件内部布局 |
+| 已知网格结构 | 内容驱动的布局 |
+| 需要精确控制 | 需要灵活性 |
+
+---
+
+*CSS Grid 是现代 Web 布局的强大工具，结合 Flexbox 使用可以创建几乎任何复杂的布局。*
+

@@ -1,0 +1,281 @@
+export const title = "Flexbox 布局指南";
+
+# {title}
+
+Flexbox（弹性盒子布局）是 CSS3 中一个强大的一维布局模型，专门用于在容器中灵活地分配空间和对齐项目。
+
+## 什么是 Flexbox？
+
+Flexbox 是一种一维布局模型，它能够在一个方向上（行或列）高效地布局、对齐和分配容器内项目之间的空间，即使它们的大小是未知或动态的。
+
+### Flexbox 解决的问题
+
+- 垂直居中元素
+- 创建等高列
+- 灵活的空间分配
+- 响应式布局
+
+## 基本概念
+
+在 Flexbox 布局中，有两个重要概念：
+
+- Flex 容器（Flex Container）：设置了 `display: flex` 的父元素
+- Flex 项目（Flex Items）：容器的直接子元素
+
+### 主轴和交叉轴
+
+- 主轴（Main Axis）：Flex 项目排列的方向
+- 交叉轴（Cross Axis）：垂直于主轴的方向
+
+## 容器属性
+
+### display
+
+```css
+.container {
+  display: flex; /* 或 inline-flex */
+}
+```
+
+将元素定义为 Flex 容器，其子元素变为 Flex 项目。
+
+### flex-direction
+
+定义主轴的方向：
+
+```css
+.container {
+  flex-direction: row; /* 默认值，水平从左到右 */
+  /* flex-direction: row-reverse; */ /* 水平从右到左 */
+  /* flex-direction: column; */ /* 垂直从上到下 */
+  /* flex-direction: column-reverse; */ /* 垂直从下到上 */
+}
+```
+
+### justify-content
+
+定义项目在主轴上的对齐方式：
+
+```css
+.container {
+  justify-content: flex-start; /* 默认值，左对齐 */
+  /* justify-content: flex-end; */ /* 右对齐 */
+  /* justify-content: center; */ /* 居中 */
+  /* justify-content: space-between; */ /* 两端对齐，项目之间间隔相等 */
+  /* justify-content: space-around; */ /* 每个项目两侧间隔相等 */
+  /* justify-content: space-evenly; */ /* 项目和间隔完全均分 */
+}
+```
+
+### align-items
+
+定义项目在交叉轴上的对齐方式：
+
+```css
+.container {
+  align-items: stretch; /* 默认值，拉伸填满容器 */
+  /* align-items: flex-start; */ /* 交叉轴起点对齐 */
+  /* align-items: flex-end; */ /* 交叉轴终点对齐 */
+  /* align-items: center; */ /* 交叉轴中点对齐 */
+  /* align-items: baseline; */ /* 项目第一行文字的基线对齐 */
+}
+```
+
+### flex-wrap
+
+定义是否换行：
+
+```css
+.container {
+  flex-wrap: nowrap; /* 默认值，不换行 */
+  /* flex-wrap: wrap; */ /* 换行，第一行在上方 */
+  /* flex-wrap: wrap-reverse; */ /* 换行，第一行在下方 */
+}
+```
+
+### align-content
+
+定义多根轴线的对齐方式（只在多行时有效）：
+
+```css
+.container {
+  align-content: stretch; /* 默认值 */
+  /* align-content: flex-start; */
+  /* align-content: flex-end; */
+  /* align-content: center; */
+  /* align-content: space-between; */
+  /* align-content: space-around; */
+}
+```
+
+### gap
+
+设置项目之间的间距：
+
+```css
+.container {
+  gap: 10px; /* 行和列的间距 */
+  /* row-gap: 10px; */ /* 行间距 */
+  /* column-gap: 20px; */ /* 列间距 */
+}
+```
+
+## 项目属性
+
+### flex-grow
+
+定义项目的放大比例，默认为 0（不放大）：
+
+```css
+.item {
+  flex-grow: 0; /* 默认值 */
+  /* flex-grow: 1; */ /* 占据剩余空间 */
+}
+```
+
+### flex-shrink
+
+定义项目的缩小比例，默认为 1（空间不足时缩小）：
+
+```css
+.item {
+  flex-shrink: 1; /* 默认值 */
+  /* flex-shrink: 0; */ /* 不缩小 */
+}
+```
+
+### flex-basis
+
+定义项目的初始大小，默认为 `auto`：
+
+```css
+.item {
+  flex-basis: auto; /* 默认值 */
+  /* flex-basis: 200px; */
+  /* flex-basis: 50%; */
+}
+```
+
+### flex 简写
+
+```css
+.item {
+  flex: 0 1 auto; /* 默认值: flex-grow flex-shrink flex-basis */
+  /* flex: 1; */ /* 等同于 flex: 1 1 0% */
+  /* flex: auto; */ /* 等同于 flex: 1 1 auto */
+  /* flex: none; */ /* 等同于 flex: 0 0 auto */
+}
+```
+
+### align-self
+
+允许单个项目有不同的对齐方式：
+
+```css
+.item {
+  align-self: auto; /* 默认值，继承父元素的 align-items */
+  /* align-self: flex-start; */
+  /* align-self: flex-end; */
+  /* align-self: center; */
+  /* align-self: baseline; */
+  /* align-self: stretch; */
+}
+```
+
+### order
+
+定义项目的排列顺序，数值越小越靠前，默认为 0：
+
+```css
+.item {
+  order: 0; /* 默认值 */
+  /* order: -1; */ /* 排在最前面 */
+  /* order: 1; */ /* 排在后面 */
+}
+```
+
+## 实用示例
+
+### 水平垂直居中
+
+```css
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+```
+
+### 等高列布局
+
+```css
+.container {
+  display: flex;
+}
+
+.item {
+  flex: 1; /* 所有列等宽 */
+}
+```
+
+### 圣杯布局
+
+```css
+.container {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.header, .footer {
+  flex: 0 0 auto;
+}
+
+.main {
+  flex: 1 0 auto;
+  display: flex;
+}
+
+.sidebar {
+  flex: 0 0 200px;
+}
+
+.content {
+  flex: 1;
+}
+```
+
+### 响应式导航栏
+
+```css
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+}
+
+.nav-items {
+  display: flex;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    flex-direction: column;
+  }
+}
+```
+
+## 最佳实践
+
+1. 使用 `gap` 而不是 margin：更简洁，更易维护
+2. 使用 `flex` 简写：比单独设置三个属性更简洁
+3. 避免过度使用 `flex-grow`：可能导致意外的布局结果
+4. 结合媒体查询：创建响应式布局
+
+---
+
+*Flexbox 是现代 CSS 布局的基础，掌握它能够大大提高开发效率。*
+

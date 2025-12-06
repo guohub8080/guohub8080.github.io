@@ -1,0 +1,435 @@
+export const title = "SQL 基础查询";
+
+# {title}
+
+SQL（Structured Query Language，结构化查询语言）是用于管理关系型数据库的标准语言。掌握 SQL 是 Web 开发的必备技能。
+
+## 基本概念
+
+### 数据库、表和记录
+
+- 数据库（Database）：存储数据的容器
+- 表（Table）：数据库中的数据结构，由行和列组成
+- 记录（Row/Record）：表中的一行数据
+- 字段（Column/Field）：表中的一列
+
+### 数据类型
+
+常用的 SQL 数据类型：
+
+| 类型 | 说明 | 示例 |
+|-----|------|------|
+| `INT` | 整数 | 123 |
+| `VARCHAR(n)` | 可变长度字符串 | 'Hello' |
+| `TEXT` | 长文本 | 文章内容 |
+| `DECIMAL(m,n)` | 精确小数 | 99.99 |
+| `DATE` | 日期 | 2025-01-01 |
+| `DATETIME` | 日期时间 | 2025-01-01 10:30:00 |
+| `BOOLEAN` | 布尔值 | TRUE/FALSE |
+
+## 创建表
+
+```sql
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  age INT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+### 约束（Constraints）
+
+- PRIMARY KEY：主键，唯一标识每条记录
+- NOT NULL：字段不能为空
+- UNIQUE：字段值必须唯一
+- DEFAULT：设置默认值
+- AUTO_INCREMENT：自动递增
+
+## 插入数据（INSERT）
+
+### 插入单条记录
+
+```sql
+INSERT INTO users (username, email, password, age)
+VALUES ('zhangsan', 'zhangsan@example.com', 'hashed_password', 25);
+```
+
+### 插入多条记录
+
+```sql
+INSERT INTO users (username, email, password, age)
+VALUES 
+  ('lisi', 'lisi@example.com', 'hashed_password', 30),
+  ('wangwu', 'wangwu@example.com', 'hashed_password', 28),
+  ('zhaoliu', 'zhaoliu@example.com', 'hashed_password', 35);
+```
+
+### 从其他表插入
+
+```sql
+INSERT INTO archived_users (username, email, age)
+SELECT username, email, age
+FROM users
+WHERE created_at < '2020-01-01';
+```
+
+## 查询数据（SELECT）
+
+### 基本查询
+
+```sql
+-- 查询所有字段
+SELECT * FROM users;
+
+-- 查询指定字段
+SELECT username, email FROM users;
+
+-- 使用别名
+SELECT username AS 用户名, email AS 邮箱 FROM users;
+```
+
+### WHERE 条件筛选
+
+```sql
+-- 等于
+SELECT * FROM users WHERE age = 25;
+
+-- 不等于
+SELECT * FROM users WHERE age != 25;
+SELECT * FROM users WHERE age <> 25;
+
+-- 大于、小于
+SELECT * FROM users WHERE age > 25;
+SELECT * FROM users WHERE age >= 25;
+SELECT * FROM users WHERE age < 30;
+
+-- 范围查询
+SELECT * FROM users WHERE age BETWEEN 25 AND 35;
+
+-- 包含查询
+SELECT * FROM users WHERE age IN (25, 30, 35);
+
+-- NULL 值查询
+SELECT * FROM users WHERE age IS NULL;
+SELECT * FROM users WHERE age IS NOT NULL;
+```
+
+### 模糊查询（LIKE）
+
+```sql
+-- % 表示任意多个字符
+SELECT * FROM users WHERE username LIKE 'zhang%';  -- zhang开头
+SELECT * FROM users WHERE username LIKE '%san';    -- san结尾
+SELECT * FROM users WHERE username LIKE '%an%';    -- 包含an
+
+-- _ 表示单个字符
+SELECT * FROM users WHERE username LIKE 'zhang_an';
+```
+
+### 逻辑运算符
+
+```sql
+-- AND：同时满足多个条件
+SELECT * FROM users WHERE age > 25 AND age < 35;
+
+-- OR：满足任一条件
+SELECT * FROM users WHERE age < 20 OR age > 60;
+
+-- NOT：取反
+SELECT * FROM users WHERE NOT (age < 20);
+
+-- 组合使用
+SELECT * FROM users 
+WHERE (age > 25 AND age < 35) OR username LIKE 'admin%';
+```
+
+### 排序（ORDER BY）
+
+```sql
+-- 升序（默认）
+SELECT * FROM users ORDER BY age;
+SELECT * FROM users ORDER BY age ASC;
+
+-- 降序
+SELECT * FROM users ORDER BY age DESC;
+
+-- 多字段排序
+SELECT * FROM users ORDER BY age DESC, username ASC;
+```
+
+### 限制结果数量（LIMIT）
+
+```sql
+-- 获取前10条记录
+SELECT * FROM users LIMIT 10;
+
+-- 分页：跳过前20条，获取10条（第3页，每页10条）
+SELECT * FROM users LIMIT 10 OFFSET 20;
+
+-- MySQL简写
+SELECT * FROM users LIMIT 20, 10;
+```
+
+### 去重（DISTINCT）
+
+```sql
+-- 去除重复的年龄
+SELECT DISTINCT age FROM users;
+
+-- 多字段去重
+SELECT DISTINCT age, city FROM users;
+```
+
+## 聚合函数
+
+### 常用聚合函数
+
+```sql
+-- 计数
+SELECT COUNT(*) FROM users;
+SELECT COUNT(age) FROM users;  -- 不计算NULL值
+SELECT COUNT(DISTINCT age) FROM users;  -- 去重计数
+
+-- 求和
+SELECT SUM(age) FROM users;
+
+-- 平均值
+SELECT AVG(age) FROM users;
+
+-- 最大值
+SELECT MAX(age) FROM users;
+
+-- 最小值
+SELECT MIN(age) FROM users;
+```
+
+### 分组（GROUP BY）
+
+```sql
+-- 按年龄分组，统计每个年龄的人数
+SELECT age, COUNT(*) as count
+FROM users
+GROUP BY age;
+
+-- 多字段分组
+SELECT age, city, COUNT(*) as count
+FROM users
+GROUP BY age, city;
+
+-- 分组后筛选（HAVING）
+SELECT age, COUNT(*) as count
+FROM users
+GROUP BY age
+HAVING COUNT(*) > 5;  -- 只显示人数大于5的年龄组
+```
+
+WHERE vs HAVING：
+- `WHERE`：在分组前筛选
+- `HAVING`：在分组后筛选
+
+```sql
+SELECT age, COUNT(*) as count
+FROM users
+WHERE age > 18           -- 先筛选：只统计18岁以上
+GROUP BY age
+HAVING COUNT(*) > 5;     -- 再筛选：只显示人数大于5的组
+```
+
+## 更新数据（UPDATE）
+
+```sql
+-- 更新单个字段
+UPDATE users SET age = 26 WHERE username = 'zhangsan';
+
+-- 更新多个字段
+UPDATE users 
+SET age = 26, email = 'newemail@example.com'
+WHERE username = 'zhangsan';
+
+-- 批量更新
+UPDATE users SET age = age + 1 WHERE age < 30;
+
+-- 更新所有记录（危险操作！）
+UPDATE users SET status = 'active';
+```
+
+⚠️ 警告：不带 WHERE 条件的 UPDATE 会更新所有记录！
+
+## 删除数据（DELETE）
+
+```sql
+-- 删除指定记录
+DELETE FROM users WHERE username = 'zhangsan';
+
+-- 批量删除
+DELETE FROM users WHERE age < 18;
+
+-- 删除所有记录（危险操作！）
+DELETE FROM users;
+
+-- 更快的清空表（重置自增ID）
+TRUNCATE TABLE users;
+```
+
+⚠️ 警告：不带 WHERE 条件的 DELETE 会删除所有记录！
+
+## 连接查询（JOIN）
+
+假设有两个表：
+
+```sql
+-- 用户表
+CREATE TABLE users (
+  id INT PRIMARY KEY,
+  username VARCHAR(50)
+);
+
+-- 文章表
+CREATE TABLE posts (
+  id INT PRIMARY KEY,
+  user_id INT,
+  title VARCHAR(200)
+);
+```
+
+### 内连接（INNER JOIN）
+
+只返回两表中匹配的记录：
+
+```sql
+SELECT users.username, posts.title
+FROM users
+INNER JOIN posts ON users.id = posts.user_id;
+```
+
+### 左连接（LEFT JOIN）
+
+返回左表所有记录，右表匹配的记录：
+
+```sql
+SELECT users.username, posts.title
+FROM users
+LEFT JOIN posts ON users.id = posts.user_id;
+```
+
+### 右连接（RIGHT JOIN）
+
+返回右表所有记录，左表匹配的记录：
+
+```sql
+SELECT users.username, posts.title
+FROM users
+RIGHT JOIN posts ON users.id = posts.user_id;
+```
+
+### 使用别名简化
+
+```sql
+SELECT u.username, p.title
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id;
+```
+
+## 子查询
+
+### 在 WHERE 中使用子查询
+
+```sql
+-- 查找年龄大于平均年龄的用户
+SELECT * FROM users
+WHERE age > (SELECT AVG(age) FROM users);
+
+-- 查找有文章的用户
+SELECT * FROM users
+WHERE id IN (SELECT DISTINCT user_id FROM posts);
+```
+
+### 在 SELECT 中使用子查询
+
+```sql
+SELECT 
+  username,
+  (SELECT COUNT(*) FROM posts WHERE user_id = users.id) as post_count
+FROM users;
+```
+
+## 实用示例
+
+### 分页查询
+
+```sql
+-- 第1页（每页10条）
+SELECT * FROM users ORDER BY id LIMIT 10 OFFSET 0;
+
+-- 第2页
+SELECT * FROM users ORDER BY id LIMIT 10 OFFSET 10;
+
+-- 第3页
+SELECT * FROM users ORDER BY id LIMIT 10 OFFSET 20;
+```
+
+### 搜索功能
+
+```sql
+SELECT * FROM posts
+WHERE title LIKE '%React%' OR content LIKE '%React%'
+ORDER BY created_at DESC
+LIMIT 20;
+```
+
+### 统计分析
+
+```sql
+-- 每个用户的文章数量
+SELECT u.username, COUNT(p.id) as post_count
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id
+GROUP BY u.id, u.username
+ORDER BY post_count DESC;
+```
+
+### 最近活跃用户
+
+```sql
+SELECT DISTINCT u.*
+FROM users u
+JOIN posts p ON u.id = p.user_id
+WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+ORDER BY p.created_at DESC;
+```
+
+## 性能优化建议
+
+使用索引：为常用的查询字段创建索引
+   ```sql
+   CREATE INDEX idx_username ON users(username);
+   CREATE INDEX idx_email ON users(email);
+   ```
+避免 SELECT *：只查询需要的字段
+
+使用 LIMIT：限制返回的记录数
+
+合理使用 JOIN：避免过多的表连接
+
+优化 WHERE 条件：将最具筛选性的条件放在前面
+
+## 常见错误
+
+忘记 WHERE 条件：导致更新或删除所有记录
+
+N+1 查询问题：在循环中执行查询
+
+SQL 注入：直接拼接 SQL 语句而不使用参数化查询
+
+未使用索引：导致全表扫描
+
+过度使用子查询：可以用 JOIN 替代
+
+---
+
+*SQL 是数据库操作的基础，熟练掌握可以大大提高开发效率。*
+

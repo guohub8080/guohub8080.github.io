@@ -1,0 +1,235 @@
+@import "@assets/fonts/fonts.css";
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+@import "./theme/themes.css";
+
+/* 自定义 dark 变体：使用 data-theme 属性而不是 class */
+@custom-variant dark (&:is([data-theme="dark"] *));
+
+/* 分拆文件引入组件特定的动画样式 - 保持 global.css 整洁 */
+@import "@shadcn/components/background/AuroraBackground/styles.css";
+
+@theme {
+  --radius: 0.625rem;
+
+  /* 主题字体变量 */
+  --guohub-theme-font-family: minsans-v, "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* 代码字体变量 */
+  --guohub-code-font-family: jb-mono, ui-monospace, SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace;
+
+  /* 日文字体变量（其他东亚字体） */
+  --guohub-jp-font-family: minsans-v, "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* 字重变量 - 自定义 Tailwind 字重类的值 */
+  /* Tailwind v4 使用 --font-* 命名格式 */
+  /* 这些值由 globalSettings 动态设置 */
+  --font-light: 300;
+  --font-normal: 350;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* 基础颜色映射 - 这些颜色变量将被Tailwind CSS识别并映射到相应的类名 */
+
+  /* 页面背景色 - 主背景区域颜色 */
+  --color-background: oklch(1 0 0);
+
+  /* 前景色 - 主要文字颜色 */
+  --color-foreground: oklch(0.145 0 0);
+
+  /* 卡片背景色 - Card组件背景 */
+  --color-card: oklch(1 0 0);
+
+  /* 卡片前景色 - Card组件文字颜色 */
+  --color-card-foreground: oklch(0.145 0 0);
+
+  /* 弹出框背景色 - Popover、Tooltip等弹出组件背景 */
+  --color-popover: oklch(1 0 0);
+
+  /* 弹出框前景色 - 弹出组件文字颜色 */
+  --color-popover-foreground: oklch(0.145 0 0);
+
+  /* 主色调 - 使用品牌蓝 #1976D2 */
+  --color-primary: #1976D2;
+
+  /* 主色调前景色 - 按钮文字等（与主色形成对比） */
+  --color-primary-foreground: #ffffff;
+
+  /* 次要色调 - 次要按钮、背景等次要元素的颜色 */
+  --color-secondary: oklch(0.97 0 0);
+
+  /* 次要色调前景色 - 次要元素上的文字颜色 */
+  --color-secondary-foreground: oklch(0.205 0 0);
+
+  /* 柔和背景色 - 用于柔和强调的背景区域 */
+  --color-muted: oklch(0.97 0 0);
+
+  /* 柔和前景色 - 柔和背景上的文字颜色 */
+  --color-muted-foreground: oklch(0.556 0 0);
+
+  /* 强调色 - 用于突出显示的元素 */
+  --color-accent: oklch(0.97 0 0);
+
+  /* 强调色前景色 - 强调元素上的文字颜色 */
+  --color-accent-foreground: oklch(0.205 0 0);
+
+  /* 危险色 - 删除、错误等危险操作的颜色 */
+  --color-destructive: oklch(0.577 0.245 27.325);
+
+  /* 危险色前景色 - 危险元素上的文字颜色 */
+  --color-destructive-foreground: oklch(0.985 0 0);
+
+  /* 边框色 - 各种边框和分割线的颜色 */
+  --color-border: oklch(0.922 0 0);
+
+  /* 输入框颜色 - 输入框背景颜色 */
+  --color-input: oklch(0.922 0 0);
+
+  /* 焦点环颜色 - 跟随主色 */
+  --color-ring: #1976D2;
+
+  /* 图表颜色1-5 - 用于数据可视化的颜色系列 */
+  --color-chart-1: oklch(0.646 0.222 41.116);
+  --color-chart-2: oklch(0.6 0.118 184.704);
+  --color-chart-3: oklch(0.398 0.07 227.392);
+  --color-chart-4: oklch(0.828 0.189 84.429);
+  --color-chart-5: oklch(0.769 0.188 70.08);
+
+  /* 侧边栏颜色系列 - 专门用于侧边栏组件 */
+  --color-sidebar: oklch(0.985 0 0);
+  --color-sidebar-foreground: oklch(0.145 0 0);
+  --color-sidebar-primary: oklch(0.205 0 0);
+  --color-sidebar-primary-foreground: oklch(0.985 0 0);
+  --color-sidebar-accent: oklch(0.97 0 0);
+  --color-sidebar-accent-foreground: oklch(0.205 0 0);
+  --color-sidebar-border: oklch(0.922 0 0);
+  --color-sidebar-ring: oklch(0.708 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply text-foreground;
+    font-family: var(--guohub-theme-font-family);
+    font-weight: var(--font-normal);
+  }
+
+  button,
+  [role="button"] {
+    @apply cursor-pointer;
+  }
+
+  /* 确保列表标记颜色与文本颜色一致 */
+  ul, ol {
+    &::marker {
+      color: inherit;
+    }
+  }
+
+  li::marker {
+    color: inherit;
+  }
+}
+
+/* 覆盖 Tailwind 的字重工具类 */
+/* 使用 CSS 变量，由 globalSettings 动态控制 */
+@layer utilities {
+  .font-light {
+    font-weight: var(--font-light) !important;
+  }
+
+  .font-normal {
+    font-weight: var(--font-normal) !important;
+  }
+
+  .font-medium {
+    font-weight: var(--font-medium) !important;
+  }
+
+  .font-semibold {
+    font-weight: var(--font-semibold) !important;
+  }
+
+  .font-bold {
+    font-weight: var(--font-bold) !important;
+  }
+}
+
+/* 主题字体类 */
+.theme-font-family {
+  font-family: var(--guohub-theme-font-family);
+}
+
+/* 代码字体类 */
+.code-font-family {
+  font-family: var(--guohub-code-font-family);
+}
+
+/* 日文字体类 */
+.jp-font {
+  font-family: var(--guohub-jp-font-family) !important;
+}
+
+/* 导航面板动画 - 移除缩放效果 */
+[data-radix-popper-content-wrapper][data-state="open"],
+[data-radix-popper-content-wrapper][data-state="closed"] {
+  transform: scale(1) !important;
+}
+
+/* Ant Design 样式已禁用 */
+/* .ant-tabs-tab-btn{
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.ant-tabs-tab-active{
+    background-color: #d0e4f5 !important;
+    color: white!important;
+    font-weight: 700;
+} */
+
+:root {
+  --sidebar: var(--color-secondary);
+  --sidebar-foreground: var(--color-secondary-foreground);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-primary-foreground);
+  --sidebar-accent: var(--color-accent);
+  --sidebar-accent-foreground: var(--color-accent-foreground);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-ring);
+}
+
+.dark {
+  --sidebar: var(--color-secondary);
+  --sidebar-foreground: var(--color-secondary-foreground);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-primary-foreground);
+  --sidebar-accent: var(--color-accent);
+  --sidebar-accent-foreground: var(--color-accent-foreground);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-ring);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

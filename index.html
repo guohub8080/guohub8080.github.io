@@ -1,54 +1,20 @@
 <!doctype html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
 	<meta charset="UTF-8"/>
-	<link rel="icon" type="image/svg+xml" href="/src/assets/svgs/logos/favicon.svg"/>
-	<meta name="viewport" content="width=device-width"/>
+	<link rel="icon" type="image/svg+xml" href="/src/dev/assets/svgs/logoSvg/favicon.svg"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<meta name="referrer" content="no-referrer">
 	<title>方块郭的图书馆</title>
-	<if-uniapp/>
-	<script>
-		if (!!window.ActiveXObject || "ActiveXObject" in window) {
-			document.write("<h1>您的浏览器版本可能过低，暂不支持访问本页面。</h1><h1>推荐使用谷歌浏览器或微软Edge浏览器。</h1>")
-		}
-	</script>
+	<script type="module" src="/src/dev/main.tsx"></script>
 </head>
-<body style="margin: 0">
-<noscript>
-	<div>您的浏览器不支持JavaScript或禁用JavaScript，本页面暂不支持访问。</div>
-</noscript>
-<!--[if IE]> <h1>您的浏览器版本可能过低，暂不支持访问本页面。</h1><h1>推荐使用谷歌浏览器或微软Edge浏览器。</h1><![endif]-->
-<div id="root" style="padding: 0;margin: 0">
-	<div style="margin: 0; display: flex;flex-direction:column;justify-content: center;align-items: center;width: 100%;height: calc(100vh);
-	background-color: #f5f5f5;	overflow-x: hidden;	overflow-y: hidden">
-		<div style="margin-bottom: 15px;color:#798690;font-size: 16px">方块郭的图书馆</div>
-		<div>
-			<img src="/src/assets/svgs/logos/authorLogo.svg"
-			     style="width: 50px;height: 50px;filter: drop-shadow(0 6px 6px rgb(184,184,184));" alt="">
-			<div style="font-size: 12px;color: gray;margin-top: 10px">加载中...</div>
-		</div>
-		<script type="text/javascript">
-			setTimeout(function () {
-				try {
-					var s = document.getElementById("no_net")
-					s.style.opacity = "1"
-				} catch (e) {
-				}
-			}, 2500)
-		</script>
-		<div id="no_net"
-		     style="opacity: 0;transition: all ease 0.2s;background-color: #fff;margin-top: 25px;padding: 15px 25px;border-radius: 15px;filter: drop-shadow(0 0px 16px rgb(230,230,230));">
-			<div style="font-size: 14px;color: #b3b3b3;">长时间卡在这个页面？尝试以下备用地址吧：</div>
-			<a style="display: block;text-decoration: none;color: rgb(83, 133, 229)" href="https://mtkit.top">https://guohub.top</a>
-			<a style="display: block;text-decoration: none;color: rgb(83, 133, 229)"
-			   href="https://guohub8080.github.io/mtkit/">https://guohub8080.github.io/</a>
-			<a style="display: block;text-decoration: none;color: rgb(83, 133, 229)" href="https://mtkit.pages.dev/">https://guohub.pages.dev/</a>
-			<a style="display: block;text-decoration: none;color: rgb(83, 133, 229)" href="https://mtkit.vercel.app/">https://guohub.vercel.app/</a>
-			<a style="display: block;text-decoration: none;color: rgb(83, 133, 229)" href="https://mtkit.netlify.app/">https://guohub.netlify.app/</a>
-		</div>
-	
-	</div>
+<body>
 
+
+<div id="root">
+	<h1>加载中...</h1>
 </div>
-<script type="module" src="/src/main.tsx"></script>
+
+
 </body>
 </html>

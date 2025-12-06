@@ -1,0 +1,1321 @@
+export const title = "Sequelize ORM 使用指南";
+
+# {title}
+
+Sequelize 是 Node.js 最流行的 ORM（对象关系映射）库，支持多种数据库。本文将介绍如何在 Express 应用中使用 Sequelize。
+
+## 什么是 Sequelize？
+
+Sequelize 是一个基于 Promise 的 Node.js ORM，支持 PostgreSQL、MySQL、MariaDB、SQLite 和 MSSQL 等数据库。
+
+### 核心特点
+
+- 类型安全：支持 TypeScript
+- 多数据库支持：统一的 API
+- 关系映射：一对一、一对多、多对多
+- 事务支持：ACID 事务处理
+- 迁移系统：数据库版本控制
+- 查询构建器：链式 API
+- 钩子函数：生命周期回调
+
+### ORM 的优势
+
+- 用对象操作代替 SQL 语句
+- 自动处理数据库差异
+- 防止 SQL 注入
+- 类型安全和自动补全
+- 易于维护和测试
+
+## 安装和配置
+
+### 安装依赖
+
+```bash
+# 安装 Sequelize
+npm install sequelize
+
+# 安装 SQLite 驱动
+npm install sqlite3
+
+# 安装 TypeScript 类型定义
+npm install -D @types/node
+
+# 安装 Sequelize CLI（可选，用于迁移管理）
+npm install -D sequelize-cli
+```
+
+### 数据库连接配置
+
+创建 `src/config/database.ts`：
+
+```typescript
+import { Sequelize } from 'sequelize';
+import path from 'path';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// SQLite 连接配置
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../database.sqlite');
+
+export const sequelize = new Sequelize({
+  dialect: 'sqlite',
+  storage: dbPath,
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  // SQLite 不需要连接池，但可以配置其他选项
+  define: {
+    timestamps: true,
+    underscored: true, // 使用 snake_case 命名
+    freezeTableName: true // 使用单数表名
+  }
+});
+
+// 测试连接
+export async function testConnection() {
+  try {
+    await sequelize.authenticate();
+    console.log('SQLite database connection established successfully.');
+    console.log('Database location:', dbPath);
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+  }
+}
+
+// 同步数据库（开发环境使用）
+export async function syncDatabase(force: boolean = false) {
+  try {
+    await sequelize.sync({ force }); // force: true 会删除所有表重建
+    console.log('Database synchronized successfully.');
+  } catch (error) {
+    console.error('Database synchronization failed:', error);
+  }
+}
+```
+
+### 环境变量配置
+
+`.env` 文件：
+
+```
+# 数据库配置
+DB_PATH=./database.sqlite
+
+# 应用配置
+PORT=3000
+NODE_ENV=development
+```
+
+### SQLite 的优势
+
+在开发和测试环境中使用 SQLite 有很多优势：
+
+- 零配置：无需安装和配置数据库服务器
+- 轻量级：整个数据库就是一个文件
+- 便携性：可以轻松复制和分享数据库文件
+- 快速：对于中小型应用性能优异
+- 完整的 SQL 支持：支持大部分 SQL 标准
+- 适合开发：快速原型开发和测试
+
+## 初始化数据库
+
+在应用启动时初始化数据库：
+
+```typescript
+// src/index.ts
+import express from 'express';
+import { sequelize, testConnection, syncDatabase } from './config/database';
+import userRoutes from './routes/users';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+
+// 路由
+app.use('/api/users', userRoutes);
+
+// 初始化数据库并启动服务器
+async function startServer() {
+  try {
+    // 测试数据库连接
+    await testConnection();
+    
+    // 同步数据库结构（开发环境）
+    if (process.env.NODE_ENV === 'development') {
+      await syncDatabase(false); // false 表示不删除现有数据
+    }
+    
+    // 启动服务器
+    app.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
+```
+
+## 定义模型
+
+### 基础模型定义
+
+创建 `src/models/User.ts`：
+
+```typescript
+import { DataTypes, Model, Optional } from 'sequelize';
+import { sequelize } from '../config/database';
+
+// 定义模型属性接口
+interface UserAttributes {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// 创建时可选的属性
+interface UserCreationAttributes extends Optional<UserAttributes, 'id'> {}
+
+// 定义模型类
+class User extends Model<UserAttributes, UserCreationAttributes> 
+  implements UserAttributes {
+  public id!: number;
+  public username!: string;
+  public email!: string;
+  public password!: string;
+  public firstName?: string;
+  public lastName?: string;
+  
+  // 时间戳
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+  
+  // 关联属性（稍后定义）
+  // public readonly posts?: Post[];
+}
+
+// 初始化模型
+User.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+      validate: {
+        len: [3, 50]
+      }
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true
+      }
+    },
+    password: {
+      type: DataTypes.STRING(255),
+      allowNull: false
+    },
+    firstName: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    lastName: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    }
+  },
+  {
+    sequelize,
+    tableName: 'users',
+    timestamps: true,
+    underscored: true // 使用 snake_case 命名
+  }
+);
+
+export default User;
+```
+
+### 数据类型
+
+Sequelize 支持多种数据类型：
+
+```typescript
+import { DataTypes } from 'sequelize';
+
+// 字符串
+DataTypes.STRING(100)      // VARCHAR(100)
+DataTypes.TEXT             // TEXT
+DataTypes.TEXT('tiny')     // TINYTEXT
+
+// 数字
+DataTypes.INTEGER          // INTEGER
+DataTypes.BIGINT          // BIGINT
+DataTypes.FLOAT           // FLOAT
+DataTypes.DECIMAL(10, 2)  // DECIMAL(10,2)
+
+// 布尔
+DataTypes.BOOLEAN         // BOOLEAN
+
+// 日期
+DataTypes.DATE            // DATETIME
+DataTypes.DATEONLY        // DATE
+
+// JSON
+DataTypes.JSON            // JSON
+DataTypes.JSONB           // JSONB (PostgreSQL)
+
+// 枚举
+DataTypes.ENUM('active', 'inactive', 'pending')
+
+// UUID
+DataTypes.UUID
+```
+
+### 验证规则
+
+```typescript
+{
+  email: {
+    type: DataTypes.STRING,
+    validate: {
+      isEmail: true,
+      notEmpty: true
+    }
+  },
+  age: {
+    type: DataTypes.INTEGER,
+    validate: {
+      min: 0,
+      max: 120
+    }
+  },
+  url: {
+    type: DataTypes.STRING,
+    validate: {
+      isUrl: true
+    }
+  },
+  status: {
+    type: DataTypes.STRING,
+    validate: {
+      isIn: [['active', 'inactive', 'pending']]
+    }
+  },
+  username: {
+    type: DataTypes.STRING,
+    validate: {
+      len: [3, 20],
+      isAlphanumeric: true
+    }
+  },
+  // 自定义验证
+  customField: {
+    type: DataTypes.STRING,
+    validate: {
+      customValidator(value: string) {
+        if (!value.startsWith('PREFIX_')) {
+          throw new Error('Value must start with PREFIX_');
+        }
+      }
+    }
+  }
+}
+```
+
+## CRUD 操作
+
+### 创建（Create）
+
+```typescript
+import User from './models/User';
+
+// 创建单条记录
+async function createUser() {
+  const user = await User.create({
+    username: 'john_doe',
+    email: 'john@example.com',
+    password: 'hashed_password',
+    firstName: 'John',
+    lastName: 'Doe'
+  });
+  
+  console.log('Created user:', user.toJSON());
+  return user;
+}
+
+// 批量创建
+async function createMultipleUsers() {
+  const users = await User.bulkCreate([
+    { username: 'user1', email: 'user1@example.com', password: 'pass1' },
+    { username: 'user2', email: 'user2@example.com', password: 'pass2' },
+    { username: 'user3', email: 'user3@example.com', password: 'pass3' }
+  ]);
+  
+  return users;
+}
+
+// 使用 build 和 save
+async function buildAndSave() {
+  const user = User.build({
+    username: 'jane_doe',
+    email: 'jane@example.com',
+    password: 'password'
+  });
+  
+  // 修改属性
+  user.firstName = 'Jane';
+  
+  // 保存到数据库
+  await user.save();
+  
+  return user;
+}
+```
+
+### 查询（Read）
+
+```typescript
+// 查询所有记录
+async function findAllUsers() {
+  const users = await User.findAll();
+  return users;
+}
+
+// 条件查询
+async function findUsersByCondition() {
+  const users = await User.findAll({
+    where: {
+      firstName: 'John'
+    }
+  });
+  return users;
+}
+
+// 查询单条记录
+async function findUserById(id: number) {
+  const user = await User.findByPk(id);
+  
+  if (!user) {
+    throw new Error('User not found');
+  }
+  
+  return user;
+}
+
+// findOne
+async function findUserByEmail(email: string) {
+  const user = await User.findOne({
+    where: { email }
+  });
+  
+  return user;
+}
+
+// 选择特定字段
+async function findUsersWithFields() {
+  const users = await User.findAll({
+    attributes: ['id', 'username', 'email']
+  });
+  return users;
+}
+
+// 排序
+async function findUsersOrdered() {
+  const users = await User.findAll({
+    order: [
+      ['createdAt', 'DESC'],
+      ['username', 'ASC']
+    ]
+  });
+  return users;
+}
+
+// 分页
+async function findUsersPaginated(page: number = 1, limit: number = 10) {
+  const offset = (page - 1) * limit;
+  
+  const { rows, count } = await User.findAndCountAll({
+    limit,
+    offset,
+    order: [['createdAt', 'DESC']]
+  });
+  
+  return {
+    users: rows,
+    total: count,
+    page,
+    totalPages: Math.ceil(count / limit)
+  };
+}
+```
+
+### 查询操作符
+
+```typescript
+import { Op } from 'sequelize';
+
+// 比较操作符
+const users = await User.findAll({
+  where: {
+    age: {
+      [Op.gt]: 18,        // 大于
+      [Op.gte]: 18,       // 大于等于
+      [Op.lt]: 65,        // 小于
+      [Op.lte]: 65,       // 小于等于
+      [Op.ne]: 30,        // 不等于
+      [Op.between]: [18, 65]  // 在范围内
+    }
+  }
+});
+
+// 逻辑操作符
+const results = await User.findAll({
+  where: {
+    [Op.or]: [
+      { firstName: 'John' },
+      { firstName: 'Jane' }
+    ]
+  }
+});
+
+// 模糊查询
+const searchUsers = await User.findAll({
+  where: {
+    username: {
+      [Op.like]: '%john%',      // 包含
+      [Op.iLike]: '%john%',     // 不区分大小写（PostgreSQL）
+      [Op.startsWith]: 'john',  // 以...开始
+      [Op.endsWith]: 'doe'      // 以...结束
+    }
+  }
+});
+
+// IN 操作
+const specificUsers = await User.findAll({
+  where: {
+    id: {
+      [Op.in]: [1, 2, 3, 4]
+    }
+  }
+});
+
+// NOT 操作
+const notDeletedUsers = await User.findAll({
+  where: {
+    status: {
+      [Op.not]: 'deleted'
+    }
+  }
+});
+```
+
+### 更新（Update）
+
+```typescript
+// 更新单条记录
+async function updateUser(id: number, updates: Partial<UserAttributes>) {
+  const user = await User.findByPk(id);
+  
+  if (!user) {
+    throw new Error('User not found');
+  }
+  
+  await user.update(updates);
+  return user;
+}
+
+// 批量更新
+async function updateMultipleUsers() {
+  const [affectedCount] = await User.update(
+    { status: 'active' },
+    {
+      where: {
+        createdAt: {
+          [Op.lt]: new Date('2024-01-01')
+        }
+      }
+    }
+  );
+  
+  console.log(`Updated ${affectedCount} users`);
+}
+
+// 增量更新
+async function incrementField(userId: number) {
+  const user = await User.findByPk(userId);
+  
+  if (user) {
+    await user.increment('loginCount');
+    // 或
+    await user.increment({ loginCount: 5 });
+  }
+}
+```
+
+### 删除（Delete）
+
+```typescript
+// 删除单条记录
+async function deleteUser(id: number) {
+  const user = await User.findByPk(id);
+  
+  if (!user) {
+    throw new Error('User not found');
+  }
+  
+  await user.destroy();
+}
+
+// 批量删除
+async function deleteInactiveUsers() {
+  const deletedCount = await User.destroy({
+    where: {
+      status: 'inactive',
+      lastLoginAt: {
+        [Op.lt]: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000) // 1年前
+      }
+    }
+  });
+  
+  console.log(`Deleted ${deletedCount} users`);
+}
+```
+
+## 模型关联
+
+### 一对多关系
+
+```typescript
+// models/User.ts
+import Post from './Post';
+
+User.hasMany(Post, {
+  foreignKey: 'userId',
+  as: 'posts'
+});
+
+// models/Post.ts
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from '../config/database';
+import User from './User';
+
+class Post extends Model {
+  public id!: number;
+  public userId!: number;
+  public title!: string;
+  public content!: string;
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+}
+
+Post.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    title: {
+      type: DataTypes.STRING(200),
+      allowNull: false
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    }
+  },
+  {
+    sequelize,
+    tableName: 'posts'
+  }
+);
+
+Post.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'author'
+});
+
+export default Post;
+```
+
+### 查询关联数据
+
+```typescript
+// 包含关联数据
+async function getUserWithPosts(userId: number) {
+  const user = await User.findByPk(userId, {
+    include: [{
+      model: Post,
+      as: 'posts'
+    }]
+  });
+  
+  return user;
+}
+
+// 嵌套包含
+async function getPostWithAuthor(postId: number) {
+  const post = await Post.findByPk(postId, {
+    include: [{
+      model: User,
+      as: 'author',
+      attributes: ['id', 'username', 'email']
+    }]
+  });
+  
+  return post;
+}
+
+// 条件过滤关联
+async function getUserWithRecentPosts(userId: number) {
+  const user = await User.findByPk(userId, {
+    include: [{
+      model: Post,
+      as: 'posts',
+      where: {
+        createdAt: {
+          [Op.gte]: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // 最近30天
+        }
+      }
+    }]
+  });
+  
+  return user;
+}
+```
+
+### 多对多关系
+
+```typescript
+// models/Tag.ts
+class Tag extends Model {
+  public id!: number;
+  public name!: string;
+}
+
+Tag.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    name: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true
+    }
+  },
+  {
+    sequelize,
+    tableName: 'tags'
+  }
+);
+
+// models/PostTag.ts（中间表）
+class PostTag extends Model {
+  public postId!: number;
+  public tagId!: number;
+}
+
+PostTag.init(
+  {
+    postId: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'posts',
+        key: 'id'
+      }
+    },
+    tagId: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'tags',
+        key: 'id'
+      }
+    }
+  },
+  {
+    sequelize,
+    tableName: 'post_tags',
+    timestamps: false
+  }
+);
+
+// 建立关联
+Post.belongsToMany(Tag, {
+  through: PostTag,
+  foreignKey: 'postId',
+  as: 'tags'
+});
+
+Tag.belongsToMany(Post, {
+  through: PostTag,
+  foreignKey: 'tagId',
+  as: 'posts'
+});
+
+// 查询
+async function getPostWithTags(postId: number) {
+  const post = await Post.findByPk(postId, {
+    include: [{
+      model: Tag,
+      as: 'tags'
+    }]
+  });
+  
+  return post;
+}
+```
+
+## 事务
+
+```typescript
+import { sequelize } from './config/database';
+
+// 手动管理事务
+async function transferMoney(fromUserId: number, toUserId: number, amount: number) {
+  const t = await sequelize.transaction();
+  
+  try {
+    // 扣除发送者余额
+    await User.decrement(
+      { balance: amount },
+      { where: { id: fromUserId }, transaction: t }
+    );
+    
+    // 增加接收者余额
+    await User.increment(
+      { balance: amount },
+      { where: { id: toUserId }, transaction: t }
+    );
+    
+    // 提交事务
+    await t.commit();
+    console.log('Transfer successful');
+  } catch (error) {
+    // 回滚事务
+    await t.rollback();
+    console.error('Transfer failed:', error);
+    throw error;
+  }
+}
+
+// 自动管理事务
+async function createUserWithProfile(userData: any, profileData: any) {
+  return await sequelize.transaction(async (t) => {
+    const user = await User.create(userData, { transaction: t });
+    
+    const profile = await Profile.create(
+      { ...profileData, userId: user.id },
+      { transaction: t }
+    );
+    
+    return { user, profile };
+  });
+}
+```
+
+## Express 集成示例
+
+```typescript
+// src/routes/users.ts
+import express, { Request, Response } from 'express';
+import User from '../models/User';
+import { Op } from 'sequelize';
+
+const router = express.Router();
+
+// GET /api/users
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '10', search } = req.query;
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const offset = (pageNum - 1) * limitNum;
+    
+    const where: any = {};
+    
+    if (search) {
+      // SQLite 使用 LIKE，不区分大小写
+      where[Op.or] = [
+        { username: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } }
+      ];
+    }
+    
+    const { rows, count } = await User.findAndCountAll({
+      where,
+      limit: limitNum,
+      offset,
+      order: [['createdAt', 'DESC']],
+      attributes: { exclude: ['password'] }
+    });
+    
+    res.json({
+      data: rows,
+      total: count,
+      page: pageNum,
+      totalPages: Math.ceil(count / limitNum)
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/users/:id
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findByPk(id, {
+      attributes: { exclude: ['password'] },
+      include: [{
+        model: Post,
+        as: 'posts',
+        limit: 5,
+        order: [['createdAt', 'DESC']]
+      }]
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/users
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const { username, email, password, firstName, lastName } = req.body;
+    
+    // 验证
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // 创建用户
+    const user = await User.create({
+      username,
+      email,
+      password, // 实际应用中需要加密
+      firstName,
+      lastName
+    });
+    
+    // 返回时排除密码
+    const userJson = user.toJSON();
+    delete userJson.password;
+    
+    res.status(201).json(userJson);
+  } catch (error: any) {
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({ error: 'Username or email already exists' });
+    }
+    
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
+    
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/users/:id
+router.put('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // 不允许更新密码（应该有单独的端点）
+    delete updates.password;
+    
+    await user.update(updates);
+    
+    const userJson = user.toJSON();
+    delete userJson.password;
+    
+    res.json(userJson);
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE /api/users/:id
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    await user.destroy();
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+export default router;
+```
+
+## SQLite 特性和注意事项
+
+### 数据类型映射
+
+SQLite 使用动态类型系统，Sequelize 会自动处理类型转换：
+
+```typescript
+// Sequelize 类型 -> SQLite 存储类型
+DataTypes.INTEGER      // INTEGER
+DataTypes.FLOAT        // REAL
+DataTypes.STRING       // TEXT
+DataTypes.TEXT         // TEXT
+DataTypes.BOOLEAN      // INTEGER (0 或 1)
+DataTypes.DATE         // TEXT (ISO8601 格式)
+DataTypes.JSON         // TEXT (JSON 字符串)
+```
+
+### 查看数据库内容
+
+```bash
+# 使用 SQLite 命令行工具
+sqlite3 database.sqlite
+
+# 查看所有表
+.tables
+
+# 查看表结构
+.schema users
+
+# 查询数据
+SELECT * FROM users;
+
+# 退出
+.quit
+```
+
+### 数据库备份
+
+```bash
+# 备份数据库（复制文件即可）
+cp database.sqlite database.backup.sqlite
+
+# 或使用 SQLite dump
+sqlite3 database.sqlite .dump > backup.sql
+
+# 从备份恢复
+sqlite3 new_database.sqlite < backup.sql
+```
+
+### 使用 sequelize.sync() 管理数据库
+
+```typescript
+// 开发环境快速同步
+import { sequelize } from './config/database';
+import User from './models/User';
+import Post from './models/Post';
+
+async function initDatabase() {
+  // 删除所有表并重新创建（慎用！）
+  // await sequelize.sync({ force: true });
+  
+  // 只创建不存在的表
+  await sequelize.sync();
+  
+  // 更新已存在的表结构（添加缺失的列）
+  // await sequelize.sync({ alter: true });
+  
+  console.log('Database synchronized');
+}
+```
+
+## 数据库迁移（可选）
+
+对于生产环境，推荐使用迁移来管理数据库变更：
+
+```bash
+# 初始化 Sequelize CLI
+npx sequelize-cli init
+
+# 创建 .sequelizerc 配置文件
+```
+
+创建 `.sequelizerc`：
+
+```javascript
+const path = require('path');
+
+module.exports = {
+  'config': path.resolve('src', 'config', 'database.json'),
+  'models-path': path.resolve('src', 'models'),
+  'seeders-path': path.resolve('src', 'seeders'),
+  'migrations-path': path.resolve('src', 'migrations')
+};
+```
+
+创建 `src/config/database.json`：
+
+```json
+{
+  "development": {
+    "dialect": "sqlite",
+    "storage": "./database.sqlite"
+  },
+  "test": {
+    "dialect": "sqlite",
+    "storage": ":memory:"
+  },
+  "production": {
+    "dialect": "sqlite",
+    "storage": "./production.sqlite"
+  }
+}
+```
+
+创建和运行迁移：
+
+```bash
+# 创建迁移文件
+npx sequelize-cli migration:generate --name create-users-table
+
+# 运行迁移
+npx sequelize-cli db:migrate
+
+# 回滚迁移
+npx sequelize-cli db:migrate:undo
+```
+
+迁移文件示例：
+
+```javascript
+// migrations/20240101000000-create-users-table.js
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable('users', {
+      id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+      },
+      username: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        unique: true
+      },
+      email: {
+        type: Sequelize.STRING(100),
+        allowNull: false,
+        unique: true
+      },
+      password: {
+        type: Sequelize.STRING(255),
+        allowNull: false
+      },
+      created_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      }
+    });
+    
+    // 创建索引
+    await queryInterface.addIndex('users', ['email']);
+    await queryInterface.addIndex('users', ['username']);
+  },
+  
+  down: async (queryInterface) => {
+    await queryInterface.dropTable('users');
+  }
+};
+```
+
+## 最佳实践
+
+### 1. 使用 TypeScript 提供类型安全
+
+完整的类型定义让代码更安全、更易维护。
+
+### 2. 开发环境使用 SQLite
+
+SQLite 非常适合：
+- 本地开发和测试
+- 快速原型开发
+- 小型应用和工具
+- 学习和实验
+
+### 3. 定期备份数据
+
+```bash
+# 创建备份脚本
+cp database.sqlite backups/database_$(date +%Y%m%d_%H%M%S).sqlite
+```
+
+### 4. 使用事务确保数据一致性
+
+SQLite 的事务性能很好，充分利用。
+
+### 5. 适当使用索引
+
+```typescript
+// 在模型定义中添加索引
+User.init({
+  // ...字段定义
+}, {
+  sequelize,
+  indexes: [
+    { fields: ['email'] },
+    { fields: ['username'] },
+    { fields: ['created_at'] }
+  ]
+});
+```
+
+### 6. 密码加密
+
+```bash
+npm install bcrypt
+npm install -D @types/bcrypt
+```
+
+```typescript
+import bcrypt from 'bcrypt';
+
+// 在保存前加密密码
+User.beforeCreate(async (user) => {
+  if (user.password) {
+    user.password = await bcrypt.hash(user.password, 10);
+  }
+});
+
+// 验证密码
+async function verifyPassword(plainPassword: string, hashedPassword: string) {
+  return await bcrypt.compare(plainPassword, hashedPassword);
+}
+```
+
+### 7. 数据验证
+
+充分利用 Sequelize 的验证功能。
+
+### 8. 错误处理
+
+针对 SQLite 特定的错误进行处理。
+
+### 9. 生产环境考虑
+
+SQLite 适合：
+- 读多写少的应用
+- 单服务器部署
+- 嵌入式应用
+
+不适合：
+- 高并发写入
+- 多服务器集群
+- 大规模数据（建议 < 1GB）
+
+如需升级，Sequelize 支持轻松切换到 PostgreSQL 或 MySQL。
+
+## 完整示例项目结构
+
+```
+my-express-app/
+├── src/
+│   ├── config/
+│   │   └── database.ts
+│   ├── models/
+│   │   ├── User.ts
+│   │   └── Post.ts
+│   ├── routes/
+│   │   └── users.ts
+│   ├── migrations/          # 可选
+│   │   └── 20240101-create-users.js
+│   └── index.ts
+├── database.sqlite          # SQLite 数据库文件
+├── .env
+├── .gitignore              # 记得添加 *.sqlite
+├── package.json
+└── tsconfig.json
+```
+
+`.gitignore` 示例：
+
+```
+node_modules/
+dist/
+*.sqlite
+*.sqlite-journal
+.env
+```
+
+## 总结
+
+Sequelize + SQLite 是开发 Express 应用的理想组合：
+
+- SQLite 零配置，开箱即用
+- Sequelize 提供强大的 ORM 功能
+- TypeScript 提供类型安全
+- 完整的 CRUD 和关联支持
+- 易于学习和上手
+
+这个组合特别适合：
+- 学习和实验
+- 快速原型开发
+- 中小型应用
+- 单体应用部署
+
+当应用规模扩大时，可以轻松迁移到 PostgreSQL 或 MySQL，Sequelize 的代码基本不需要修改。
+
+## 相关资源
+
+- [Sequelize 官方文档](https://sequelize.org/)
+- [Sequelize GitHub](https://github.com/sequelize/sequelize)
+- [Sequelize CLI](https://github.com/sequelize/cli)
+- [TypeScript 支持](https://sequelize.org/docs/v6/other-topics/typescript/)
+

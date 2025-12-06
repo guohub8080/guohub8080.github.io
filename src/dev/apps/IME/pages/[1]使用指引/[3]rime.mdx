@@ -1,0 +1,266 @@
+export const title = "小狼毫输入法使用手册"
+
+# {title}
+
+小狼毫（Rime）是一款开源的输入法引擎，具有高度可定制性和强大的功能。本手册介绍如何使用和配置小狼毫输入法。
+
+## 简介
+
+小狼毫（Weasel）是 Rime 输入法引擎在 Windows 平台上的发行版。Rime 是一个跨平台的输入法框架：
+
+- Windows: 小狼毫（Weasel）
+- macOS: 鼠须管（Squirrel）
+- Linux: 中州韵（ibus-rime）
+
+### 主要特点
+
+- 开源免费：完全开源，无广告
+- 高度可定制：支持自定义词库、配色、输入方案
+- 多方案支持：支持拼音、双拼、五笔等多种输入方案
+- 配置灵活：基于 YAML 配置文件，可精细调整
+
+---
+
+## 安装小狼毫
+
+### 下载
+
+访问 Rime 官方 GitHub 仓库下载最新版本：
+
+```
+https://github.com/rime/weasel/releases
+```
+
+### 安装步骤
+
+1. 下载 `weasel-x.x.x.exe` 安装包
+2. 双击运行安装程序
+3. 按照安装向导完成安装
+4. 安装完成后，小狼毫会出现在系统输入法列表中
+
+---
+
+## 重要文件位置
+
+### 用户文件夹
+
+小狼毫的所有配置文件和词库都存储在用户文件夹中：
+
+```
+%APPDATA%\Rime
+```
+
+完整路径通常为：
+
+```
+C:\Users\{你的用户名}\AppData\Roaming\Rime
+```
+
+### 主要文件说明
+
+| 文件/文件夹 | 说明 |
+|------------|------|
+| `default.yaml` | 全局配置文件 |
+| `weasel.yaml` | 小狼毫外观配置 |
+| `*.schema.yaml` | 输入方案配置文件 |
+| `*.dict.yaml` | 词典文件 |
+| `*.userdb/` | 用户词库（学习的词汇） |
+| `installation.yaml` | 安装信息 |
+| `user.yaml` | 用户配置 |
+
+---
+
+## 基本使用
+
+### 切换输入法
+
+- **Ctrl + ~**：唤出方案选单，可切换输入方案
+- **Ctrl + Shift + `**：繁简切换
+- **Ctrl + Shift + 4**：简体/繁体切换
+
+### 候选词操作
+
+- **数字键 1-9**：选择对应的候选词
+- **Page Up/Down**：翻页查看更多候选
+- **-/=**：上一页/下一页候选词
+
+### 重新部署
+
+修改配置文件后，需要重新部署才能生效：
+
+1. 右键点击任务栏的小狼毫图标
+2. 选择"重新部署"
+3. 等待部署完成
+
+---
+
+## 词库配置
+
+### 词库位置
+
+用户词库（通过使用学习的词汇）存储在：
+
+```
+%APPDATA%\Rime\*.userdb\
+```
+
+### 导入自定义词库
+
+创建自定义词典文件 `custom_dict.dict.yaml`：
+
+```yaml
+---
+name: custom_dict
+version: "1.0"
+sort: by_weight
+...
+
+词条	ci tiao	100
+自定义	zi ding yi	100
+词库	ci ku	100
+```
+
+在对应的输入方案文件中引用：
+
+```yaml
+translator:
+  dictionary: luna_pinyin
+  prism: luna_pinyin_simp
+  
+  # 添加自定义词典
+  user_dict: custom_dict
+```
+
+### 备份词库
+
+需要备份以下内容：
+
+1. **用户词库文件夹**：`*.userdb/`
+2. **自定义词典**：`*.dict.yaml`
+3. **配置文件**：`*.yaml`
+
+建议定期备份整个 `%APPDATA%\Rime` 文件夹。
+
+---
+
+## 常用配置
+
+### 自定义外观
+
+编辑 `weasel.custom.yaml`（如果没有则创建）：
+
+```yaml
+patch:
+  # 配色方案
+  style:
+    color_scheme: clean_white  # 配色方案名称
+    font_face: "Microsoft YaHei"  # 字体
+    font_point: 14  # 字号
+    
+  # 候选词横排/竖排
+  style/horizontal: true  # true 为横排，false 为竖排
+  
+  # 候选词数量
+  "menu/page_size": 5
+```
+
+### 自定义快捷键
+
+编辑 `default.custom.yaml`：
+
+```yaml
+patch:
+  # 中英文切换
+  ascii_composer:
+    switch_key:
+      Shift_L: commit_code  # 左 Shift 切换中英文
+      Shift_R: noop  # 右 Shift 不操作
+      Control_L: noop
+      Control_R: noop
+```
+
+### 添加模糊音
+
+在输入方案的 custom 文件中（如 `luna_pinyin.custom.yaml`）：
+
+```yaml
+patch:
+  # 模糊音配置
+  'speller/algebra':
+    - erase/^xx$/
+    - abbrev/^([a-z]).+$/$1/
+    - abbrev/^([zcs]h).+$/$1/
+    
+    # z=zh, c=ch, s=sh
+    - derive/^([zcs])h/$1/
+    - derive/^([zcs])([^h])/$1h$2/
+    
+    # n=l
+    - derive/^n/l/
+    - derive/^l/n/
+    
+    # r=l
+    - derive/^r/l/
+    - derive/^l/r/
+```
+
+---
+
+## 使用本系统备份 Rime 词库
+
+### 配置备份路径
+
+在本系统的备份设置中，将 Rime 用户文件夹添加到备份列表：
+
+```
+C:\Users\{你的用户名}\AppData\Roaming\Rime
+```
+
+### 建议备份内容
+
+- 所有 `.userdb` 文件夹（用户词库）
+- 所有 `.custom.yaml` 文件（自定义配置）
+- 自定义的 `.dict.yaml` 词典文件
+- 可选：`.schema.yaml` 文件（如果有自定义方案）
+
+### 恢复词库
+
+1. 登录本系统
+2. 在"备份管理"页面选择要恢复的备份
+3. 将备份文件还原到 Rime 用户文件夹
+4. 在小狼毫中选择"重新部署"
+
+---
+
+## 常见问题
+
+### 词库同步到其他设备
+
+1. 备份整个 Rime 用户文件夹
+2. 在目标设备上安装小狼毫
+3. 将备份的文件复制到目标设备的 Rime 用户文件夹
+4. 重新部署
+
+### 候选词不显示
+
+1. 检查是否正确部署
+2. 查看日志文件 `%APPDATA%\Rime\*.INFO`
+3. 尝试删除 `build` 文件夹后重新部署
+
+### 配置修改不生效
+
+确保：
+1. 配置文件语法正确（YAML 格式严格要求缩进）
+2. 修改后执行了"重新部署"
+3. 使用 `.custom.yaml` 覆盖而不是直接修改原配置
+
+---
+
+## 参考资源
+
+- 官方网站: https://rime.im/
+- GitHub: https://github.com/rime/weasel
+- 帮助文档: https://github.com/rime/home/wiki
+- 配置指南: https://github.com/rime/home/wiki/CustomizationGuide
+
+

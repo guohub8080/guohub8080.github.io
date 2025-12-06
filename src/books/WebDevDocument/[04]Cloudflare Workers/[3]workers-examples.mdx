@@ -1,0 +1,782 @@
+export const title = "Cloudflare Workers 实战案例";
+
+# {title}
+
+通过实际案例学习如何使用 Cloudflare Workers 解决真实问题。
+
+## 案例 1：API 限流器
+
+实现一个基于 IP 的 API 限流系统。
+
+```typescript
+interface Env {
+  RATE_LIMITER: KVNamespace;
+}
+
+interface RateLimitInfo {
+  count: number;
+  resetTime: number;
+}
+
+const RATE_LIMIT = 100; // 每小时最多 100 次请求
+const WINDOW = 3600; // 1小时（秒）
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    // 获取客户端 IP
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const key = `ratelimit:${ip}`;
+    const now = Date.now();
+    
+    // 检查当前限流状态
+    const limitInfo = await env.RATE_LIMITER.get<RateLimitInfo>(key, 'json');
+    
+    let count = 1;
+    let resetTime = now + WINDOW * 1000;
+    
+    if (limitInfo) {
+      if (now < limitInfo.resetTime) {
+        // 在同一时间窗口内
+        count = limitInfo.count + 1;
+        resetTime = limitInfo.resetTime;
+        
+        if (count > RATE_LIMIT) {
+          // 超过限流
+          const retryAfter = Math.ceil((resetTime - now) / 1000);
+          
+          return Response.json({
+            error: 'Rate limit exceeded',
+            message: `请求过于频繁，请在 ${retryAfter} 秒后重试`,
+            limit: RATE_LIMIT,
+            remaining: 0,
+            resetAt: new Date(resetTime).toISOString()
+          }, {
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': RATE_LIMIT.toString(),
+              'X-RateLimit-Remaining': '0',
+              'X-RateLimit-Reset': resetTime.toString(),
+              'Retry-After': retryAfter.toString()
+            }
+          });
+        }
+      } else {
+        // 时间窗口已过，重置计数
+        count = 1;
+        resetTime = now + WINDOW * 1000;
+      }
+    }
+    
+    // 更新限流信息
+    const newLimitInfo: RateLimitInfo = { count, resetTime };
+    ctx.waitUntil(
+      env.RATE_LIMITER.put(
+        key,
+        JSON.stringify(newLimitInfo),
+        { expirationTtl: WINDOW }
+      )
+    );
+    
+    // 返回成功响应
+    const remaining = RATE_LIMIT - count;
+    
+    return Response.json({
+      message: 'Request successful',
+      ip: ip,
+      rateLimit: {
+        limit: RATE_LIMIT,
+        remaining: remaining,
+        resetAt: new Date(resetTime).toISOString()
+      }
+    }, {
+      headers: {
+        'X-RateLimit-Limit': RATE_LIMIT.toString(),
+        'X-RateLimit-Remaining': remaining.toString(),
+        'X-RateLimit-Reset': resetTime.toString()
+      }
+    });
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 案例 2：图片处理和 CDN
+
+使用 Cloudflare Images API 处理和优化图片。
+
+```typescript
+interface Env {
+  IMAGES_BUCKET: R2Bucket;
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // 解析路径：/images/width-height-quality/filename.jpg
+    const match = url.pathname.match(/^\/images\/(\d+)-(\d+)-(\d+)\/(.+)$/);
+    
+    if (!match) {
+      return new Response('Invalid URL format', { status: 400 });
+    }
+    
+    const [, width, height, quality, filename] = match;
+    
+    // 生成缓存键
+    const cacheKey = `${width}x${height}q${quality}/${filename}`;
+    const cache = caches.default;
+    
+    // 检查缓存
+    let response = await cache.match(request);
+    if (response) {
+      return response;
+    }
+    
+    try {
+      // 从 R2 获取原始图片
+      const object = await env.IMAGES_BUCKET.get(filename);
+      
+      if (!object) {
+        return new Response('Image not found', { status: 404 });
+      }
+      
+      // 使用 Cloudflare Image Resizing
+      const imageResponse = await fetch(request.url, {
+        cf: {
+          image: {
+            width: parseInt(width),
+            height: parseInt(height),
+            quality: parseInt(quality),
+            fit: 'cover'
+          }
+        }
+      });
+      
+      // 创建响应并缓存
+      response = new Response(imageResponse.body, {
+        headers: {
+          'Content-Type': object.httpMetadata?.contentType || 'image/jpeg',
+          'Cache-Control': 'public, max-age=31536000', // 1年
+          'ETag': object.etag || '',
+          'X-Image-Dimensions': `${width}x${height}`,
+          'X-Image-Quality': quality
+        }
+      });
+      
+      ctx.waitUntil(cache.put(request, response.clone()));
+      
+      return response;
+      
+    } catch (error) {
+      console.error('Image processing error:', error);
+      return Response.json({
+        error: 'Failed to process image'
+      }, { status: 500 });
+    }
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 案例 3：JWT 认证中间件
+
+实现 JWT token 验证。
+
+```typescript
+interface Env {
+  JWT_SECRET: string;
+}
+
+interface JWTPayload {
+  sub: string; // 用户 ID
+  email: string;
+  role: string;
+  exp: number; // 过期时间
+  iat: number; // 签发时间
+}
+
+// 简化的 JWT 验证（生产环境建议使用 jose 库）
+async function verifyJWT(token: string, secret: string): Promise<JWTPayload | null> {
+  try {
+    const [headerB64, payloadB64, signatureB64] = token.split('.');
+    
+    if (!headerB64 || !payloadB64 || !signatureB64) {
+      return null;
+    }
+    
+    // 解码 payload
+    const payloadJson = atob(payloadB64);
+    const payload: JWTPayload = JSON.parse(payloadJson);
+    
+    // 检查过期时间
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      console.log('Token expired');
+      return null;
+    }
+    
+    // 验证签名
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${headerB64}.${payloadB64}`);
+    const keyData = encoder.encode(secret);
+    
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    
+    const signatureBytes = Uint8Array.from(
+      atob(signatureB64.replace(/-/g, '+').replace(/_/g, '/')),
+      c => c.charCodeAt(0)
+    );
+    
+    const valid = await crypto.subtle.verify(
+      'HMAC',
+      cryptoKey,
+      signatureBytes,
+      data
+    );
+    
+    return valid ? payload : null;
+    
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return null;
+  }
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // 公开路由
+    if (url.pathname === '/login' || url.pathname === '/public') {
+      return Response.json({ message: 'Public endpoint' });
+    }
+    
+    // 需要认证的路由
+    const authHeader = request.headers.get('Authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return Response.json({
+        error: 'Missing or invalid authorization header'
+      }, { status: 401 });
+    }
+    
+    const token = authHeader.substring(7); // 移除 "Bearer "
+    const payload = await verifyJWT(token, env.JWT_SECRET);
+    
+    if (!payload) {
+      return Response.json({
+        error: 'Invalid or expired token'
+      }, { status: 401 });
+    }
+    
+    // Token 有效，处理请求
+    return Response.json({
+      message: 'Authenticated request',
+      user: {
+        id: payload.sub,
+        email: payload.email,
+        role: payload.role
+      },
+      requestPath: url.pathname
+    });
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 案例 4：A/B 测试平台
+
+根据用户实现 A/B 测试。
+
+```typescript
+interface Env {
+  AB_TEST_CONFIG: KVNamespace;
+}
+
+interface ABTest {
+  id: string;
+  name: string;
+  variants: {
+    name: string;
+    weight: number; // 0-100
+  }[];
+  active: boolean;
+}
+
+// 获取用户的变体（基于 cookie 或随机分配）
+function getUserVariant(
+  request: Request,
+  test: ABTest
+): { variant: string; isNew: boolean } {
+  const cookieName = `ab_test_${test.id}`;
+  const cookies = request.headers.get('Cookie') || '';
+  
+  // 检查是否已有分配
+  const match = cookies.match(new RegExp(`${cookieName}=([^;]+)`));
+  if (match) {
+    return { variant: match[1], isNew: false };
+  }
+  
+  // 新用户，随机分配
+  const random = Math.random() * 100;
+  let cumulative = 0;
+  
+  for (const variant of test.variants) {
+    cumulative += variant.weight;
+    if (random <= cumulative) {
+      return { variant: variant.name, isNew: true };
+    }
+  }
+  
+  // 默认返回第一个变体
+  return { variant: test.variants[0].name, isNew: true };
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // 获取测试配置
+    const testConfig = await env.AB_TEST_CONFIG.get<ABTest>('homepage_test', 'json');
+    
+    if (!testConfig || !testConfig.active) {
+      // 没有活跃的测试，返回默认版本
+      return Response.json({
+        version: 'default',
+        message: 'No active A/B test'
+      });
+    }
+    
+    // 获取用户的变体
+    const { variant, isNew } = getUserVariant(request, testConfig);
+    
+    // 记录测试数据（异步）
+    if (isNew) {
+      ctx.waitUntil(
+        (async () => {
+          const key = `ab_stats:${testConfig.id}:${variant}`;
+          const stats = await env.AB_TEST_CONFIG.get(key);
+          const count = stats ? parseInt(stats) + 1 : 1;
+          await env.AB_TEST_CONFIG.put(key, count.toString());
+        })()
+      );
+    }
+    
+    // 构建响应
+    const response = Response.json({
+      version: variant,
+      testId: testConfig.id,
+      testName: testConfig.name,
+      message: `显示变体: ${variant}`
+    });
+    
+    // 设置 cookie（如果是新分配）
+    if (isNew) {
+      const cookieName = `ab_test_${testConfig.id}`;
+      const maxAge = 30 * 24 * 60 * 60; // 30天
+      response.headers.set(
+        'Set-Cookie',
+        `${cookieName}=${variant}; Max-Age=${maxAge}; Path=/; SameSite=Lax`
+      );
+    }
+    
+    return response;
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 案例 5：WebSocket 代理
+
+将 HTTP 请求升级为 WebSocket 连接。
+
+```typescript
+export default {
+  async fetch(request: Request): Promise<Response> {
+    const upgradeHeader = request.headers.get('Upgrade');
+    
+    if (!upgradeHeader || upgradeHeader !== 'websocket') {
+      return new Response('Expected Upgrade: websocket', { status: 426 });
+    }
+    
+    const webSocketPair = new WebSocketPair();
+    const [client, server] = Object.values(webSocketPair);
+    
+    // 处理 WebSocket 连接
+    server.accept();
+    
+    server.addEventListener('message', (event) => {
+      console.log('Received message:', event.data);
+      
+      try {
+        const data = JSON.parse(event.data as string);
+        
+        // Echo 回复
+        server.send(JSON.stringify({
+          type: 'echo',
+          data: data,
+          timestamp: new Date().toISOString()
+        }));
+        
+        // 广播消息（实际应用中需要维护连接列表）
+        if (data.type === 'broadcast') {
+          server.send(JSON.stringify({
+            type: 'broadcast',
+            message: data.message,
+            from: data.userId
+          }));
+        }
+        
+      } catch (error) {
+        server.send(JSON.stringify({
+          type: 'error',
+          message: 'Invalid JSON'
+        }));
+      }
+    });
+    
+    server.addEventListener('close', (event) => {
+      console.log('WebSocket closed:', event.code, event.reason);
+    });
+    
+    server.addEventListener('error', (event) => {
+      console.error('WebSocket error:', event);
+    });
+    
+    return new Response(null, {
+      status: 101,
+      webSocket: client
+    });
+  }
+};
+```
+
+## 案例 6：反向代理与负载均衡
+
+实现智能反向代理。
+
+```typescript
+interface Env {
+  BACKEND_SERVERS: string; // 逗号分隔的服务器列表
+}
+
+interface ServerHealth {
+  url: string;
+  healthy: boolean;
+  lastCheck: number;
+  latency: number;
+}
+
+// 选择最佳服务器（基于健康状态和延迟）
+function selectServer(servers: ServerHealth[]): string | null {
+  const healthyServers = servers.filter(s => s.healthy);
+  
+  if (healthyServers.length === 0) {
+    return null;
+  }
+  
+  // 基于延迟选择（简单版本，可以改进为加权轮询）
+  healthyServers.sort((a, b) => a.latency - b.latency);
+  return healthyServers[0].url;
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    const backends = env.BACKEND_SERVERS.split(',');
+    
+    // 简单的健康检查（实际应该缓存在 KV 中）
+    const serverHealth: ServerHealth[] = await Promise.all(
+      backends.map(async (url) => {
+        const start = Date.now();
+        try {
+          const response = await fetch(`${url}/health`, {
+            signal: AbortSignal.timeout(5000) // 5秒超时
+          });
+          const latency = Date.now() - start;
+          return {
+            url,
+            healthy: response.ok,
+            lastCheck: Date.now(),
+            latency
+          };
+        } catch {
+          return {
+            url,
+            healthy: false,
+            lastCheck: Date.now(),
+            latency: 9999
+          };
+        }
+      })
+    );
+    
+    const targetServer = selectServer(serverHealth);
+    
+    if (!targetServer) {
+      return Response.json({
+        error: 'All backend servers are unavailable'
+      }, { status: 503 });
+    }
+    
+    // 转发请求到选定的服务器
+    const url = new URL(request.url);
+    const backendUrl = `${targetServer}${url.pathname}${url.search}`;
+    
+    try {
+      const response = await fetch(backendUrl, {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        redirect: 'manual'
+      });
+      
+      // 添加自定义头
+      const newResponse = new Response(response.body, response);
+      newResponse.headers.set('X-Proxy-Server', targetServer);
+      newResponse.headers.set('X-Proxy-Time', new Date().toISOString());
+      
+      return newResponse;
+      
+    } catch (error) {
+      console.error('Proxy error:', error);
+      return Response.json({
+        error: 'Failed to connect to backend server'
+      }, { status: 502 });
+    }
+  }
+} satisfies ExportedHandler<Env>;
+```
+
+## 案例 7：内容安全策略（CSP）注入
+
+自动为 HTML 响应添加安全头。
+
+```typescript
+const SECURITY_HEADERS = {
+  'Content-Security-Policy': 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.example.com; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: https:; " +
+    "font-src 'self' https://fonts.gstatic.com;",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 
+    'camera=(), microphone=(), geolocation=()',
+};
+
+export default {
+  async fetch(request: Request): Promise<Response> {
+    // 获取原始响应（从源服务器或静态资源）
+    const response = await fetch(request);
+    
+    // 只为 HTML 内容添加安全头
+    const contentType = response.headers.get('Content-Type') || '';
+    
+    if (!contentType.includes('text/html')) {
+      return response;
+    }
+    
+    // 创建新响应，添加安全头
+    const newResponse = new Response(response.body, response);
+    
+    Object.entries(SECURITY_HEADERS).forEach(([key, value]) => {
+      newResponse.headers.set(key, value);
+    });
+    
+    // 添加 HSTS（仅在 HTTPS 时）
+    if (request.url.startsWith('https://')) {
+      newResponse.headers.set(
+        'Strict-Transport-Security',
+        'max-age=31536000; includeSubDomains; preload'
+      );
+    }
+    
+    return newResponse;
+  }
+};
+```
+
+## 配置示例（wrangler.toml）
+
+```toml
+name = "my-workers-app"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# KV 命名空间
+[[kv_namespaces]]
+binding = "RATE_LIMITER"
+id = "your-kv-namespace-id"
+
+[[kv_namespaces]]
+binding = "AB_TEST_CONFIG"
+id = "your-kv-namespace-id"
+
+# R2 存储桶
+[[r2_buckets]]
+binding = "IMAGES_BUCKET"
+bucket_name = "my-images"
+
+# 环境变量
+[vars]
+BACKEND_SERVERS = "https://api1.example.com,https://api2.example.com"
+
+# Cron 触发器
+[triggers]
+crons = ["0 0 * * *"]
+
+# 开发环境
+[env.dev]
+vars = { ENVIRONMENT = "development" }
+
+# 生产环境
+[env.production]
+vars = { ENVIRONMENT = "production" }
+routes = [
+  { pattern = "example.com/*", zone_name = "example.com" }
+]
+```
+
+## 测试工具
+
+### 使用 Miniflare 本地测试
+
+```bash
+# 安装
+npm install -D miniflare
+
+# 运行
+npx miniflare src/index.ts --kv RATE_LIMITER
+```
+
+### 使用 Vitest 单元测试
+
+```typescript
+// worker.test.ts
+import { describe, it, expect } from 'vitest';
+import worker from './index';
+
+describe('Worker', () => {
+  it('should return 200 for valid request', async () => {
+    const request = new Request('https://example.com/');
+    const env = {
+      JWT_SECRET: 'test-secret'
+    };
+    const ctx = {
+      waitUntil: () => {},
+      passThroughOnException: () => {}
+    };
+    
+    const response = await worker.fetch(request, env as any, ctx as any);
+    expect(response.status).toBe(200);
+  });
+});
+```
+
+## 部署策略
+
+### 金丝雀发布
+
+```bash
+# 部署到 10% 流量
+wrangler deploy --env canary --percentage 10
+
+# 监控指标...
+
+# 逐步增加流量
+wrangler deploy --env canary --percentage 50
+
+# 完全切换
+wrangler deploy --env production
+```
+
+### 版本管理
+
+```bash
+# 标记版本
+wrangler deploy --tag v1.2.3
+
+# 回滚
+wrangler rollback --tag v1.2.2
+```
+
+## 监控和日志
+
+```typescript
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const start = Date.now();
+    
+    try {
+      const response = await handleRequest(request, env);
+      
+      // 记录成功请求
+      console.log(JSON.stringify({
+        type: 'request',
+        status: response.status,
+        duration: Date.now() - start,
+        path: new URL(request.url).pathname,
+        method: request.method
+      }));
+      
+      return response;
+      
+    } catch (error) {
+      // 记录错误
+      console.error(JSON.stringify({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        duration: Date.now() - start
+      }));
+      
+      throw error;
+    }
+  }
+};
+```
+
+## 总结
+
+这些实战案例展示了 Cloudflare Workers 的强大能力：
+
+1. API 限流：保护 API 免受滥用
+2. 图片处理：动态优化和调整图片
+3. JWT 认证：安全的用户认证
+4. A/B 测试：灵活的功能测试
+5. WebSocket：实时通信
+6. 反向代理：智能负载均衡
+7. 安全头：增强应用安全性
+
+TypeScript 提供了更好的类型安全和开发体验，建议在生产环境中使用。
+
+## 进一步学习
+
+- [Cloudflare Workers Examples](https://developers.cloudflare.com/workers/examples/)
+- [Workers KV](https://developers.cloudflare.com/kv/)
+- [Durable Objects](https://developers.cloudflare.com/durable-objects/)
+- [Workers AI](https://developers.cloudflare.com/workers-ai/)

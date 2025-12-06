@@ -1,0 +1,425 @@
+export const title = "Zero Trust 零信任安全架构";
+
+# {title}
+
+Zero Trust（零信任）是一种现代网络安全理念，其核心思想是"永不信任，始终验证"。它彻底改变了传统的"城堡与护城河"安全模型，为企业和应用提供了更安全、更灵活的访问控制方式。
+
+## 传统安全模型 vs Zero Trust
+
+### 传统的"城堡与护城河"模型
+
+想象一下中世纪的城堡：
+
+```
+        城墙（防火墙）
+    ┌───────────────────┐
+    │                   │
+    │  ✓ 内部员工       │  外面的人
+    │  ✓ 办公设备       │  ↓
+    │  ✓ 服务器         │  ✗ 全部阻挡
+    │                   │
+    │  互相信任         │
+    └───────────────────┘
+```
+
+传统模型的假设：
+- 内网是安全的，外网是危险的
+- 只要进入了内网，就可以自由访问内部资源
+- 防火墙是主要的安全屏障
+
+这个模型的问题：
+- 一旦攻击者突破防火墙，就能在内网横向移动
+- 远程办公、云服务的普及让"内外网"界限模糊
+- 内部威胁（恶意员工、被盗凭证）无法防范
+
+### Zero Trust 零信任模型
+
+Zero Trust 的核心理念：
+
+```
+每一次访问都需要验证
+    ↓
+┌─────────────────────────────┐
+│  用户 → 验证身份 → 检查设备  │
+│        ↓                     │
+│    评估风险 → 最小权限       │
+│        ↓                     │
+│    允许访问特定资源          │
+└─────────────────────────────┘
+```
+
+核心原则：
+- 永不信任，始终验证：不论请求来自哪里，都要验证
+- 最小权限访问：只给用户访问完成工作所需的最少资源
+- 假设已被入侵：设计时假设网络已被攻击者渗透
+- 持续监控：实时监控所有访问行为，检测异常
+
+## Zero Trust 的三大支柱
+
+### 身份验证（Identity Verification）
+
+不再依赖"在内网就可信"，而是：
+
+- 多因素认证（MFA）：密码 + 手机验证码/生物识别
+- 单点登录（SSO）：一次登录，访问多个应用
+- 持续验证：不只是登录时验证，访问过程中持续检查
+
+示例场景：
+```
+员工登录公司应用
+  ↓
+输入用户名和密码
+  ↓
+手机收到验证码，输入确认
+  ↓
+验证设备是否为公司管理的设备
+  ↓
+检查设备安全状态（防病毒、系统更新等）
+  ↓
+根据用户角色和位置决定允许访问的资源
+```
+
+### 设备信任（Device Trust）
+
+验证访问设备的安全性：
+
+- 设备必须符合安全策略（安装了防病毒软件、操作系统已更新）
+- 检测越狱/Root 设备
+- 验证设备证书
+- 监控设备健康状态
+
+示例策略：
+```
+如果：
+  - 设备操作系统版本 < Windows 11
+  - 或未安装企业防病毒软件
+  - 或磁盘未加密
+那么：
+  - 仅允许访问非敏感资源
+  - 或完全拒绝访问
+```
+
+### 网络分段（Network Segmentation）
+
+不再是"进入内网就能访问一切"，而是：
+
+- 微分段：每个应用、服务都独立隔离
+- 应用级访问控制：用户只能访问被授权的特定应用
+- 加密所有流量：即使在"内网"也加密
+
+## Cloudflare Zero Trust 是什么？
+
+Cloudflare Zero Trust 是 Cloudflare 提供的一整套零信任安全解决方案，它可以保护您的应用、团队和网络。
+
+### 核心产品
+
+#### Cloudflare Access - 应用访问控制
+
+为您的内部应用提供安全访问。
+
+使用场景：
+- 保护内部管理后台（只有特定员工能访问）
+- 保护开发环境、测试环境
+- 保护自建的内部工具
+
+工作原理：
+```
+用户访问 admin.example.com
+    ↓
+Cloudflare Access 拦截请求
+    ↓
+要求用户登录（支持 Google、GitHub、企业 SSO 等）
+    ↓
+检查用户是否在允许列表中
+    ↓
+验证设备状态
+    ↓
+允许访问 或 拒绝访问
+```
+
+示例策略：
+```
+应用：内部管理后台
+允许访问条件：
+  - 邮箱后缀是 @company.com
+  - 使用多因素认证
+  - 设备经过 WARP 客户端连接
+  - 位置：仅中国或美国
+```
+
+配置示例：
+```javascript
+// 在 Cloudflare Access 中配置访问策略
+{
+  "name": "管理员访问",
+  "application": "admin.example.com",
+  "rules": [
+    {
+      "require": [
+        { "email_domain": "company.com" },
+        { "auth_method": "google" },
+        { "geo": ["CN", "US"] }
+      ]
+    }
+  ]
+}
+```
+
+#### Cloudflare Gateway - 安全网关
+
+为您的团队提供安全的互联网访问，类似企业级的"内容过滤 + 威胁防护"。
+
+功能：
+- DNS 过滤：阻止访问恶意网站、钓鱼网站
+- HTTP/HTTPS 检查：扫描下载的文件，检测恶意软件
+- 应用控制：限制员工访问特定应用（如禁止访问社交媒体）
+- 数据丢失防护：防止敏感数据泄露
+
+使用场景：
+```
+员工尝试访问 malicious-site.com
+    ↓
+Cloudflare Gateway 拦截
+    ↓
+检查威胁情报数据库
+    ↓
+识别为恶意网站
+    ↓
+阻止访问，显示警告页面
+```
+
+策略示例：
+```
+阻止分类为"成人内容"的网站
+阻止已知的钓鱼网站
+阻止文件分享服务（防止数据泄露）
+允许访问 GitHub、Stack Overflow（开发需要）
+记录所有 DNS 查询日志（用于安全审计）
+```
+
+#### Cloudflare Tunnel - 安全隧道
+
+让您的本地服务器或内部网络安全地暴露到互联网，无需开放防火墙端口，无需公网 IP。
+
+传统方式的问题：
+```
+本地服务器
+    ↓
+开放端口 80、443
+    ↓
+配置端口转发
+    ↓
+暴露在公网（容易被攻击）
+```
+
+使用 Cloudflare Tunnel：
+```
+本地运行 cloudflared
+    ↓
+主动连接到 Cloudflare 网络（出站连接，无需开放端口）
+    ↓
+Cloudflare 接收外部请求
+    ↓
+通过加密隧道转发到本地服务器
+    ↓
+本地服务器处理请求并返回
+```
+
+优势：
+- 无需公网 IP
+- 无需开放端口（更安全）
+- 自动 DDoS 防护
+- 自动 HTTPS 证书
+
+实际应用示例：
+```bash
+# 在本地服务器上运行
+cloudflared tunnel --url localhost:8080
+
+# 现在外部可以通过 Cloudflare 提供的域名访问您的本地服务
+# 例如：https://random-name.trycloudflare.com
+```
+
+生产环境配置：
+```bash
+# 创建一个持久的隧道
+cloudflared tunnel create my-tunnel
+
+# 配置路由
+cloudflared tunnel route dns my-tunnel app.example.com
+
+# 配置 config.yml
+tunnel: my-tunnel-id
+credentials-file: /path/to/credentials.json
+ingress:
+  - hostname: app.example.com
+    service: http://localhost:3000
+  - hostname: api.example.com
+    service: http://localhost:8080
+  - service: http_status:404
+
+# 运行隧道
+cloudflared tunnel run my-tunnel
+```
+
+#### WARP - 安全客户端
+
+Cloudflare WARP 是一个移动和桌面客户端，为设备提供安全的互联网连接。
+
+核心功能：
+- 不会降低网速（甚至可能更快）
+- 自动路由到最近的 Cloudflare 数据中心
+- 集成 Gateway 策略（DNS 过滤、内容检查）
+- 访问内部应用（通过 Access）
+
+使用场景：
+```
+员工在咖啡厅用笔记本工作
+    ↓
+启动 WARP 客户端
+    ↓
+所有流量通过 Cloudflare 网络
+    ↓
+应用 Gateway 安全策略
+    ↓
+访问内部应用（通过 Access 验证身份）
+    ↓
+安全、快速地工作
+```
+
+## 实际应用场景
+
+### 场景一：保护内部管理后台
+
+您有一个 WordPress 管理后台 `admin.example.com`，只希望公司员工能访问。
+
+传统方式的问题：
+- IP 白名单？员工在家、咖啡厅工作时 IP 会变
+- HTTP Basic Auth？密码容易泄露
+
+使用 Cloudflare Access：
+
+```
+在 Cloudflare Dashboard 创建 Access 应用
+选择域名：admin.example.com
+配置策略：
+   - 允许邮箱后缀为 @yourcompany.com
+   - 要求 Google 账号登录
+完成！现在访问 admin.example.com 会先要求 Google 登录
+```
+
+### 场景二：远程访问家里的 NAS
+
+您在家里搭建了 NAS，想在公司也能访问，但又不想把 NAS 直接暴露在公网。
+
+使用 Cloudflare Tunnel：
+
+```bash
+# 在 NAS 上安装 cloudflared
+# 创建隧道
+cloudflared tunnel create home-nas
+
+# 配置路由
+cloudflared tunnel route dns home-nas nas.yourdomain.com
+
+# 配置 config.yml
+tunnel: home-nas
+credentials-file: /path/to/credentials.json
+ingress:
+  - hostname: nas.yourdomain.com
+    service: http://localhost:5000  # NAS 的端口
+  - service: http_status:404
+
+# 运行隧道（可以设置为开机自启）
+cloudflared tunnel run home-nas
+```
+
+现在您可以通过 `https://nas.yourdomain.com` 安全地访问家里的 NAS，而且：
+- 不需要公网 IP
+- 不需要开放任何端口
+- 自动 HTTPS
+- 可以配合 Access 添加身份验证
+
+### 场景三：团队安全上网
+
+您的团队需要访问互联网，但希望：
+- 阻止访问恶意网站
+- 防止下载病毒
+- 记录访问日志（用于安全审计）
+- 在任何地方都有保护（办公室、家里、咖啡厅）
+
+使用 Cloudflare Gateway + WARP：
+
+```
+在 Cloudflare Zero Trust 创建团队
+配置 Gateway 策略：
+   - 启用恶意软件防护
+   - 阻止钓鱼网站
+   - 阻止特定分类（赌博、成人内容等）
+让员工安装 WARP 客户端
+在 WARP 中登录您的团队账号
+完成！所有流量都受保护
+```
+
+### 场景四：微服务之间的安全通信
+
+您有多个微服务需要互相通信，但不希望直接暴露在公网。
+
+传统方式：
+- 搭建私有网络（复杂）
+- 使用 API 密钥（容易泄露）
+
+使用 Cloudflare Tunnel + Access：
+
+```
+每个微服务都通过 Tunnel 连接到 Cloudflare
+    ↓
+使用 Access 的 Service Token 进行服务间认证
+    ↓
+微服务之间的流量通过 Cloudflare 网络加密传输
+    ↓
+无需公网 IP，无需开放端口
+```
+
+## 如何开始使用 Cloudflare Zero Trust
+
+Cloudflare Zero Trust 对小团队免费（最多 50 个用户）：
+
+访问 https://one.dash.cloudflare.com/
+创建一个团队（Team）
+添加应用到 Access（保护内部应用）
+配置 Gateway 策略（安全上网）
+安装 WARP 客户端（在各设备上）
+创建 Tunnel（暴露本地服务）
+
+免费计划包括：
+- 最多 50 个用户
+- Cloudflare Access（应用访问控制）
+- Cloudflare Gateway（基础 DNS 过滤）
+- Cloudflare Tunnel（无限隧道）
+- WARP 客户端
+
+## 总结
+
+Zero Trust 不是一个产品，而是一种安全理念：
+
+核心思想：永不信任，始终验证
+
+传统模型：
+```
+在内网 = 可信 ✗
+```
+
+Zero Trust：
+```
+验证身份 + 检查设备 + 最小权限 = 可信 ✓
+```
+
+Cloudflare Zero Trust 提供了完整的解决方案：
+- Access：保护应用访问
+- Gateway：安全互联网访问
+- Tunnel：安全暴露内部服务
+- WARP：设备安全连接
+
+无论您是个人开发者、小团队还是大企业，Zero Trust 都能为您的应用和团队提供更安全、更灵活的访问控制。而 Cloudflare 让 Zero Trust 的实施变得简单且经济实惠。
+

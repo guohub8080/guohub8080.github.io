@@ -1,57 +1,67 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": [
-      "ES2020",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "allowJs": true,
-    "module": "ESNext",
-    "skipLibCheck": true,
-    "noEmitOnError": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "src/*"
-      ],
-
-    },
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "@emotion/react",
-    "strict": false
-  },
-  /* Linting */
-
-  "noUnusedLocals": false,
-  "noUnusedParameters": false,
-  "noFallthroughCasesInSwitch": true,
-  "noImplicitThis": false,
-  // js/ts 混用时设为false
-  "allowSyntheticDefaultImports": true,
-  "include": [
-    "src",
-    "src/**/*.ts",
-    "src/**/*.jsx",
-    "src/**/*.js",
-    "src/**/*.d.ts",
-    "src/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    ".vscode",
-    ".idea"
-  ],
+  "files": [],
   "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
     {
       "path": "./tsconfig.node.json"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "baseUrl": "../../Code/aaaaaaaaa",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@dev/*": [
+        "./src/dev/*"
+      ],
+      "@apps/*": [
+        "./src/dev/apps/*"
+      ],
+      "@comps/*": [
+        "./src/dev/components/*"
+      ],
+      "@assets/*": [
+        "./src/dev/assets/*"
+      ],
+      "@utils/*": [
+        "./src/dev/utils/*"
+      ],
+      "@api/*": [
+        "./src/dev/api/*"
+      ],
+      "@styles/*": [
+        "./src/dev/styles/*"
+      ],
+      "@pubHTML/*": [
+        "./src/dev/pubComponents/PureHTML/*"
+      ],
+      "@pubSVG/*": [
+        "./src/dev/pubComponents/SVG/*"
+      ],
+      "@pubUtils/*": [
+        "./src/dev/pubComponents/PubUtils/*"
+      ],
+      "@svgDocument/*": [
+        "./src/books/SvgDocument/*"
+      ],
+      "@shadcn/*": [
+        "./src/dev/shadcn/*"
+      ],
+      "@books/*": [
+        "./src/books/*"
+      ],
+      "@music12doc/*": [
+        "./src/books/Music12Document/*"
+      ],
+      "@tonicml/*": [
+        "./src/dev/tonicml/*"
+      ],
+      "@mdx/*": [
+        "./src/dev/components/mdx/*"
+      ]
+    }
+  }
 }

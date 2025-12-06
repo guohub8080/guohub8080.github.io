@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "@config": "config在tailwind v4版本是需要留空的",
+    "css": "src/dev/styles/global.css",
+    "baseColor": "neutral",
+    "@baseColor": "可选的有 gray| neutral | slate| stone | zinc",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@/dev/shadcn/components",
+    "utils": "@/dev/shadcn/lib/utils",
+    "ui": "@/dev/shadcn/components/ui",
+    "lib": "@/dev/shadcn/lib",
+    "hooks": "@/dev/shadcn/hooks"
+  }
+}

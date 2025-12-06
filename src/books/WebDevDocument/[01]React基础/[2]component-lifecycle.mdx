@@ -1,0 +1,219 @@
+export const title = "组件生命周期";
+
+# {title}
+
+React 组件的生命周期是指组件从创建、更新到销毁的整个过程。理解生命周期对于优化性能和处理副作用至关重要。
+
+## 生命周期概述
+
+React 组件的生命周期可以分为三个主要阶段：
+
+1. 挂载阶段（Mounting）：组件被创建并插入到 DOM 中
+2. 更新阶段（Updating）：组件的 props 或 state 发生变化
+3. 卸载阶段（Unmounting）：组件从 DOM 中移除
+
+## 挂载阶段（Mounting）
+
+当组件实例被创建并插入 DOM 时，会依次调用以下生命周期方法：
+
+ 1. constructor()
+
+```javascript
+constructor(props) {
+  super(props);
+  // 初始化 state
+  this.state = { count: 0 };
+  // 绑定方法
+  this.handleClick = this.handleClick.bind(this);
+}
+```
+
+用途：
+- 初始化组件的 state
+- 为事件处理函数绑定实例
+- 注意：不要在 constructor 中调用 `setState()`
+
+2. static getDerivedStateFromProps()
+
+```javascript
+static getDerivedStateFromProps(props, state) {
+  // 根据 props 更新 state
+  if (props.value !== state.value) {
+    return { value: props.value };
+  }
+  return null;
+}
+```
+
+用途：
+- 在每次渲染前调用
+- 根据 props 计算新的 state
+- 返回一个对象来更新 state，或返回 null 表示不更新
+
+ 3. render()
+
+```javascript
+render() {
+  return (
+    <div>
+      <h1>{this.state.title}</h1>
+    </div>
+  );
+}
+```
+
+唯一必须的方法，负责返回组件的 JSX 结构。
+
+ 4. componentDidMount()
+
+```javascript
+componentDidMount() {
+  // DOM 已经挂载，可以执行副作用操作
+  this.fetchData();
+  this.timer = setInterval(() => {
+    this.tick();
+  }, 1000);
+}
+```
+
+用途：
+- 执行 DOM 操作
+- 发送网络请求
+- 订阅事件
+- 启动定时器
+
+## 更新阶段（Updating）
+
+当组件的 props 或 state 发生变化时，会触发更新流程：
+
+ 1. static getDerivedStateFromProps()
+
+与挂载阶段相同。
+
+ 2. shouldComponentUpdate()
+
+```javascript
+shouldComponentUpdate(nextProps, nextState) {
+  // 返回 false 可以阻止组件更新
+  return nextProps.value !== this.props.value;
+}
+```
+
+用途：
+- 性能优化
+- 决定组件是否需要重新渲染
+- 默认返回 `true`
+
+ 3. render()
+
+重新渲染组件。
+
+ 4. getSnapshotBeforeUpdate()
+
+```javascript
+getSnapshotBeforeUpdate(prevProps, prevState) {
+  // 在更新前获取 DOM 信息
+  return { scrollPosition: window.scrollY };
+}
+```
+
+用途：
+- 在更新前捕获 DOM 信息
+- 返回值会作为第三个参数传递给 `componentDidUpdate()`
+
+ 5. componentDidUpdate()
+
+```javascript
+componentDidUpdate(prevProps, prevState, snapshot) {
+  // 组件已更新
+  if (this.props.userId !== prevProps.userId) {
+    this.fetchUser(this.props.userId);
+  }
+}
+```
+
+用途：
+- 对比更新前后的 props 或 state
+- 执行副作用操作
+- 注意：必须有条件判断，否则会导致无限循环
+
+## 卸载阶段（Unmounting）
+
+
+```javascript
+componentWillUnmount() {
+  // 组件即将卸载
+  clearInterval(this.timer);
+  this.subscription.unsubscribe();
+}
+```
+
+用途：
+- 清理定时器
+- 取消网络请求
+- 取消订阅
+- 清理事件监听器
+
+## Hooks 中的生命周期
+
+在函数组件中，使用 Hooks 来模拟生命周期：
+
+```javascript
+import { useEffect } from 'react';
+
+function Example() {
+  // componentDidMount
+  useEffect(() => {
+    console.log('组件已挂载');
+  }, []);
+  
+  // componentDidUpdate（依赖于 count）
+  useEffect(() => {
+    console.log('count 已更新');
+  }, [count]);
+  
+  // componentWillUnmount
+  useEffect(() => {
+    return () => {
+      console.log('组件即将卸载');
+    };
+  }, []);
+  
+  return <div>Example</div>;
+}
+```
+
+## 错误边界（Error Boundaries）
+
+用于捕获子组件树中的 JavaScript 错误：
+
+```javascript
+class ErrorBoundary extends React.Component {
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+  
+  componentDidCatch(error, errorInfo) {
+    console.error('错误:', error, errorInfo);
+  }
+  
+  render() {
+    if (this.state.hasError) {
+      return <h1>出错了！</h1>;
+    }
+    return this.props.children;
+  }
+}
+```
+
+## 最佳实践
+
+1. 使用函数组件和 Hooks：更简洁、更容易理解
+2. 避免在 render 中产生副作用：将副作用放在 `useEffect` 或 `componentDidMount` 中
+3. 清理副作用：始终在 `componentWillUnmount` 或 `useEffect` 的返回函数中清理
+4. 性能优化：使用 `React.memo`、`useMemo`、`useCallback` 避免不必要的渲染
+
+---
+
+*理解组件生命周期有助于更好地控制组件的行为和优化应用性能。*
+
