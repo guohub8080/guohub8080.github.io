@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "../../Code/aaaaaaaaa/node_modules/.bin/vite",
-    "build": "../../Code/aaaaaaaaa/node_modules/.bin/tsc && vite build",
-    "lint": "../../Code/aaaaaaaaa/node_modules/.bin/eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "../../Code/aaaaaaaaa/node_modules/.bin/vite preview"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "gh": "pnpm build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
   },
   "eslintConfig": {
     "rules": {
