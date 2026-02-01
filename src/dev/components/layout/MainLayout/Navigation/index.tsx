@@ -11,10 +11,10 @@ import NavigationPanel from "./NavigationPanel.tsx"
 import { cn } from "../../../../shadcn/lib/utils.ts"
 import { initialCards } from "../../../../apps/Home/cardsConfig.tsx"
 
-// SVG 文字组件
+// SVG 文字组件 - 方块郭
 const SvgTextLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
   const { theme } = useGlobalSettings()
-  
+
   // 根据主题设置填充颜色
   const getFillColor = () => {
     switch (theme) {
@@ -38,15 +38,15 @@ const SvgTextLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
 
   return (
     <div className={`flex items-center justify-center ${className}`}>
-      <svg 
-        version="1.1" 
-        id="svg-text-logo" 
-        xmlns="http://www.w3.org/2000/svg" 
-        xmlnsXlink="http://www.w3.org/1999/xlink" 
-        x="0px" 
+      <svg
+        version="1.1"
+        id="svg-text-logo"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlnsXlink="http://www.w3.org/1999/xlink"
+        x="0px"
         y="0px"
-        viewBox="0 0 175 60.3" 
-        style={{enableBackground: 'new 0 0 175 60.3'} as any} 
+        viewBox="0 0 175 60.3"
+        style={{enableBackground: 'new 0 0 175 60.3'} as any}
         xmlSpace="preserve"
         className="w-full h-full transition-colors duration-300"
         preserveAspectRatio="xMidYMid meet"
@@ -85,34 +85,34 @@ const SvgTextLogo: React.FC<{ className?: string }> = ({ className = "" }) => {
 export default function Navigation() {
   const navigate = useNavigate()
   const location = useLocation()
-  
+
   const { navigationHeight, isBookTocShow, toggleBookTocShow, isBookPage } = useGlobalSettings()
   const [{ y: scrollY }] = useWindowScroll()
-  
+
   // 计算icon大小（导航栏高度的45%）
   const iconSize = navigationHeight * 0.45
-  
+
   // 根据滚动位置判断是否显示模糊效果
   const isScrolled = scrollY > 0
-  
+
   // 动态判断当前页面是否是 book 类型 - 基于全局书籍状态
   // 不需要额外判断，直接使用全局状态
 
   // 判断是否是 home 页面
   const isHomePage = location.pathname === '/home' || location.pathname === '/home/' || location.pathname === '/'
-  
+
   // 获取当前页面 title - 从 Home 卡片配置中匹配
   const [pageTitle, setPageTitle] = useState<string>('')
-  
+
   useEffect(() => {
     if (isHomePage) {
       setPageTitle('')
       return
     }
-    
+
     // 从 Home 卡片配置中匹配当前路径
     const currentPath = location.pathname.replace(/^#/, '').replace(/\/$/, '') || '/'
-    
+
     // 查找匹配的卡片
     const matchedCard = initialCards.find(card => {
       // 处理卡片 href
@@ -125,11 +125,11 @@ export default function Navigation() {
       }
       // 移除末尾的 /
       cardPath = cardPath.replace(/\/$/, '') || '/'
-      
+
       // 精确匹配或路径匹配
       return cardPath === currentPath || currentPath.startsWith(cardPath + '/')
     })
-    
+
     if (matchedCard) {
       setPageTitle(matchedCard.title)
     } else {
@@ -159,25 +159,25 @@ export default function Navigation() {
   // 所有尺寸都使用 fixed 定位（通过宽度判断调整参数）
   useEffect(() => {
     if (!isNavigationPanelOpen) return
-    
+
     let lastBreakpoint: 'mobile' | 'tablet' | 'desktop' | null = null
-    
+
     const setPosition = (force = false) => {
       const width = window.innerWidth
       const isMobile = width < 768
       const isTablet = width >= 768 && width < 1024
       const currentBreakpoint = isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop'
-      
+
       // 只在断点变化时才更新样式，避免频繁设置导致抖动（除非强制）
       if (!force && lastBreakpoint === currentBreakpoint) return
       lastBreakpoint = currentBreakpoint
-      
+
       const panelWidth = isTablet ? 600 : 800
-      
+
       // 查找 Popover 的 wrapper 和 content
       const wrapper = document.querySelector('[data-radix-popper-content-wrapper]')
       const content = document.querySelector('[data-radix-popper-content-wrapper] > div')
-      
+
       if (!wrapper || !content) {
         // 如果还没渲染，延迟重试
         if (force) {
@@ -185,15 +185,15 @@ export default function Navigation() {
         }
         return
       }
-      
+
       const wrapperEl = wrapper as HTMLElement
       const contentEl = content as HTMLElement
-      
+
       // 统一设置基础样式
       wrapperEl.style.position = 'fixed'
       wrapperEl.style.transform = 'none'
       wrapperEl.style.margin = '0'
-      
+
       if (isMobile) {
         // 移动端：全屏 fixed 定位
         // wrapper 作为滚动容器，固定高度
@@ -209,7 +209,7 @@ export default function Navigation() {
         wrapperEl.style.display = 'block'
         wrapperEl.style.justifyContent = ''
         wrapperEl.style.alignItems = ''
-        
+
         // content 作为内容，使用 relative 定位，让 wrapper 可以滚动
         contentEl.style.position = 'relative'
         contentEl.style.transform = 'none'
@@ -242,7 +242,7 @@ export default function Navigation() {
         wrapperEl.style.justifyContent = 'center'
         wrapperEl.style.alignItems = 'flex-start'
         wrapperEl.style.overflowY = 'auto'
-        
+
         // content 作为实际内容，设置固定宽度，flex 自动居中，使用 margin-top 实现间距
         contentEl.style.width = `${panelWidth}px`
         contentEl.style.maxWidth = `${panelWidth}px`
@@ -257,7 +257,7 @@ export default function Navigation() {
         contentEl.style.bottom = 'auto'
       }
     }
-    
+
     // 初始执行 - 使用 requestAnimationFrame 确保在渲染后执行
     const initPosition = () => {
       requestAnimationFrame(() => {
@@ -269,20 +269,20 @@ export default function Navigation() {
       })
     }
     const timeout = setTimeout(initPosition, 0)
-    
+
     // 只在断点变化时更新，不监听所有 resize
     const handleResize = () => {
       const width = window.innerWidth
       const isMobile = width < 768
       const isTablet = width >= 768 && width < 1024
       const currentBreakpoint = isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop'
-      
+
       if (lastBreakpoint !== currentBreakpoint) {
         setPosition(true)
       }
     }
     window.addEventListener('resize', handleResize, { passive: true })
-    
+
     // 监听 DOM 变化（只在 Popover 首次渲染时）
     const observer = new MutationObserver(() => {
       if (lastBreakpoint === null) {
@@ -292,7 +292,7 @@ export default function Navigation() {
     if (!isUndefined(document.body)) {
       observer.observe(document.body, { childList: true, subtree: true })
     }
-    
+
     return () => {
       clearTimeout(timeout)
       window.removeEventListener('resize', handleResize)
@@ -301,112 +301,152 @@ export default function Navigation() {
   }, [isNavigationPanelOpen, navigationHeight])
 
   return (
-    <header 
-      className={`sticky top-0 z-50 flex w-full flex-shrink-0 items-center justify-center transition-all duration-300 ${
-        isScrolled 
-          ? 'border-b border-border/30 backdrop-blur-[8px] bg-background/60 shadow-sm' 
+    <header
+      className={`sticky top-0 z-50 flex w-full flex-shrink-0 items-center justify-center transition-all duration-300 relative ${
+        isScrolled
+          ? 'border-b border-border/30 backdrop-blur-[8px] bg-background/60 shadow-sm'
           : 'border-b border-transparent backdrop-blur-none bg-transparent shadow-none'
       }`}
       style={{ height: `${navigationHeight}px` }}
     >
       <div className="mx-auto flex h-full w-full max-w-[1400px] items-center min-[1800px]:max-w-[1536px]">
-        <div className="flex w-full items-center justify-between px-4 max-lg:gap-4 sm:px-6 lg:px-8">
+        <div className="flex w-full items-center px-4 max-lg:gap-4 sm:px-6 lg:px-8">
           {/* Logo 区域 */}
-          <a href="/" onClick={(e) => { e.preventDefault(); navigate('/home/'); }}>
-            <div className="flex items-center gap-2.5 max-[550px]:[&_div]:hidden hover:scale-105 transition-transform duration-300 cursor-pointer">
-              <img 
-                src={logoUrl} 
-                alt="Logo" 
-                className="drop-shadow-[0_0_8px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-300"
-                style={{ 
-                  width: `${iconSize}px`, 
-                  height: `${iconSize}px` 
-                }}
-              />
-              <SvgTextLogo className="h-5 w-18 -ml-2.5" />
-            </div>
-          </a>
+          <div className="flex-shrink-0">
+            <a href="/" onClick={(e) => { e.preventDefault(); navigate('/home/'); }}>
+              <div className="flex items-center gap-4 hover:scale-105 transition-transform duration-300 cursor-pointer">
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="drop-shadow-[0_0_8px_rgba(59,130,246,0.3)] hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.5)] transition-all duration-300"
+                  style={{
+                    width: `${iconSize}px`,
+                    height: `${iconSize}px`
+                  }}
+                />
+                <SvgTextLogo className="h-5 w-18 -ml-2.5 max-[550px]:hidden" />
+              </div>
+            </a>
+          </div>
 
           {/* 中间区域 - 页面标题或空白 */}
-          <div className="flex-1 flex items-center justify-center px-4">
-            {!isHomePage && pageTitle && (
-              <>
-                {/* 黑色半透明遮罩层 - 使用 Portal 确保在最顶层，但低于 navigation，移动端通过 CSS 隐藏 */}
-                {isNavigationPanelOpen && !isUndefined(document) && createPortal(
+          <div className="flex-1"></div>
+
+          {/* 中间居中的页面标题按钮 - fixed定位在整个屏幕中心 */}
+          {!isHomePage && pageTitle && (
+            <div
+              className="fixed left-1/2 flex items-center justify-center"
+              style={{
+                zIndex: 50,
+                top: `${navigationHeight / 2}px`,
+                transform: 'translateX(-50%) translateY(-50%)'
+              }}
+            >
+              {/* 黑色半透明遮罩层 - 使用 Portal 确保在最顶层，但低于 navigation，移动端通过 CSS 隐藏 */}
+              {isNavigationPanelOpen && !isUndefined(document) && createPortal(
+                <div
+                  className="fixed bg-black/50 backdrop-blur-sm hidden md:block"
+                  onClick={() => setIsNavigationPanelOpen(false)}
+                  style={{
+                    // 从 navigation 下方开始，确保不覆盖 navigation
+                    position: 'fixed',
+                    top: `${navigationHeight}px`,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: '100vw',
+                    height: `calc(100vh - ${navigationHeight}px)`,
+                    // 确保遮罩层在 navigation 下方，但在其他内容之上
+                    zIndex: 40,
+                  }}
+                />,
+                document.body
+              )}
+              <Popover open={isNavigationPanelOpen} onOpenChange={setIsNavigationPanelOpen}>
+                <PopoverTrigger asChild>
                   <div
-                    className="fixed bg-black/50 backdrop-blur-sm hidden md:block"
-                    onClick={() => setIsNavigationPanelOpen(false)}
-                    style={{
-                      // 从 navigation 下方开始，确保不覆盖 navigation
-                      position: 'fixed',
-                      top: `${navigationHeight}px`,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      width: '100vw',
-                      height: `calc(100vh - ${navigationHeight}px)`,
-                      // 确保遮罩层在 navigation 下方，但在其他内容之上
-                      zIndex: 40,
-                    }}
-                  />,
-                  document.body
-                )}
-                <Popover open={isNavigationPanelOpen} onOpenChange={setIsNavigationPanelOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      className={cn(
-                        "text-sm font-medium text-foreground hover:text-foreground/80 transition-colors",
-                        "px-3 py-1.5 rounded-md hover:bg-accent",
-                        "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        "relative z-[50]",
-                        // 面板打开时保持 hover 样式
-                        isNavigationPanelOpen && "bg-accent text-foreground/80"
-                      )}
-                      onMouseEnter={handleMouseEnter}
-                      onClick={() => {
-                        // 移动端点击切换（通过 CSS 媒体查询控制）
-                        setIsNavigationPanelOpen(!isNavigationPanelOpen)
-                      }}
-                    >
-                      {pageTitle}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent 
+                    role="button"
+                    tabIndex={0}
                     className={cn(
-                      "p-0 border-border/50 shadow-lg z-[50] bg-background/95 backdrop-blur-sm overflow-hidden",
-                      // 桌面端和平板样式
-                      "w-auto max-w-[90vw]",
-                      "data-[state=open]:animate-in data-[state=closed]:animate-out",
-                      "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                      "data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2",
-                      // 移动端：全屏样式，强制固定定位
-                      "max-md:rounded-none max-md:border-x-0 max-md:border-t max-md:border-b-0",
-                      "max-md:!fixed max-md:!left-0 max-md:!right-0 max-md:!top-0 max-md:!bottom-0",
-                      "max-md:!w-screen max-md:!max-w-screen max-md:!h-screen",
-                      "max-md:!transform-none max-md:!translate-x-0 max-md:!translate-y-0",
-                      "max-md:[&[data-state=open]]:!scale-100 max-md:[&[data-state=closed]]:!scale-100"
+                      "text-sm font-medium text-foreground hover:text-foreground transition-all duration-200",
+                      "px-4 py-2 rounded-full hover:bg-accent",
+                      "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      "relative z-[50] flex items-center justify-center gap-2",
+                      // 面板打开时保持更明显的样式
+                      isNavigationPanelOpen && "bg-accent text-foreground",
+                      // 使用内阴影来模拟边框，不影响布局计算
+                      "hover:shadow-[inset_0_0_0_1.5px_rgb(148_163_184/0.3)]",
+                      isNavigationPanelOpen && "shadow-[inset_0_0_0_1.5px_rgb(148_163_184/0.3)]"
                     )}
-                    data-navigation-height={navigationHeight}
-                    align="center"
-                    side="bottom"
-                    sideOffset={12}
-                    avoidCollisions={true}
-                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onMouseEnter={handleMouseEnter}
+                    onClick={() => {
+                      // 移动端点击切换（通过 CSS 媒体查询控制）
+                      setIsNavigationPanelOpen(!isNavigationPanelOpen)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setIsNavigationPanelOpen(!isNavigationPanelOpen)
+                      }
+                    }}
                   >
-                    <NavigationPanel onNavigate={() => {
-                      // 导航后关闭 popover
-                      setIsNavigationPanelOpen(false)
-                    }} />
-                  </PopoverContent>
-                </Popover>
-              </>
-            )}
-          </div>
+                    {(() => {
+                      const matchedCard = initialCards.find(card => {
+                        let cardPath = card.href.replace(/^#?\/?/, '/');
+                        if (!cardPath.startsWith('/')) {
+                          cardPath = '/' + cardPath;
+                        }
+                        cardPath = cardPath.replace(/\/$/, '') || '/';
+                        const currentPath = location.pathname.replace(/^#/, '').replace(/\/$/, '') || '/';
+                        return cardPath === currentPath || currentPath.startsWith(cardPath + '/');
+                      });
+                      if (matchedCard?.icon) {
+                        return (
+                          <div className="w-4 h-4 flex items-center justify-center" style={{ color: matchedCard.color }}>
+                            {matchedCard.icon}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <div className="h-5 flex items-center justify-center">{pageTitle}</div>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent
+                  className={cn(
+                    "p-0 border-border/50 shadow-lg z-[50] bg-background/95 backdrop-blur-sm overflow-hidden",
+                    // 桌面端和平板样式
+                    "w-auto max-w-[90vw]",
+                    "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                    "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                    "data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2",
+                    // 移动端：全屏样式，强制固定定位
+                    "max-md:rounded-none max-md:border-x-0 max-md:border-t max-md:border-b-0",
+                    "max-md:!fixed max-md:!left-0 max-md:!right-0 max-md:!top-0 max-md:!bottom-0",
+                    "max-md:!w-screen max-md:!max-w-screen max-md:!h-screen",
+                    "max-md:!transform-none max-md:!translate-x-0 max-md:!translate-y-0",
+                    "max-md:[&[data-state=open]]:!scale-100 max-md:[&[data-state=closed]]:!scale-100"
+                  )}
+                  data-navigation-height={navigationHeight}
+                  align="center"
+                  side="bottom"
+                  sideOffset={12}
+                  avoidCollisions={true}
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                  <NavigationPanel onNavigate={() => {
+                    // 导航后关闭 popover
+                    setIsNavigationPanelOpen(false)
+                  }} />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
 
           {/* 右侧操作区 */}
           <div className="flex items-center gap-2 lg:gap-4">
             {/* 设置按钮 */}
-            <a 
+            <a
               href="/settings"
               onClick={(e) => { e.preventDefault(); navigate('/settings'); }}
               className="size-6 flex items-center justify-center hover:opacity-80 hover:scale-110 transition-all duration-300"
@@ -417,11 +457,11 @@ export default function Navigation() {
               </svg>
               <span className="sr-only">Settings</span>
             </a>
-            
+
             {/* GitHub 按钮 */}
-            <a 
-              href="https://github.com/guohub8080" 
-              target="_blank" 
+            <a
+              href="https://github.com/guohub8080"
+              target="_blank"
               rel="noopener noreferrer"
               className="size-6 flex items-center justify-center hover:opacity-80 hover:scale-110 transition-all duration-300 max-lg:hidden"
             >
@@ -430,7 +470,7 @@ export default function Navigation() {
               </svg>
               <span className="sr-only">Github</span>
             </a>
-            
+
             {/* TOC 切换按钮 - 仅在 book 页面显示 */}
             {isBookPage && (
               <button
